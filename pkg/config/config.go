@@ -28,7 +28,7 @@ type Config struct {
 	BindAddr          string            `default:":8000" split_words:"true" desc:"the ip address and port to bind the web server on"`
 	Origin            string            `default:"http://localhost:8000" desc:"origin (url) of the web ui for creating endpoints and CORS access"`
 	AllowOrigins      []string          `split_words:"true" default:"http://localhost:8000" desc:"a list of allowed origins (domains including port) for CORS requests"`
-	DatabaseURL       string            `split_words:"true" default:"sqlite3://daybreak.db" desc:"dsn containing backend database configuration"`
+	DatabaseURL       string            `split_words:"true" default:"sqlite3:///daybreak.db" desc:"dsn containing backend database configuration"`
 	ReadHeaderTimeout time.Duration     `split_words:"true" default:"180s" desc:"the maximum duration for reading the request header (see Go's http.Server.ReadHeaderTimeout)"`
 	WriteTimeout      time.Duration     `split_words:"true" default:"180s" desc:"the maximum duration for writing the response (see Go's http.Server.WriteTimeout)"`
 	IdleTimeout       time.Duration     `split_words:"true" default:"360s" desc:"the maximum duration for idle connections (see Go's http.Server.IdleTimeout)"`
