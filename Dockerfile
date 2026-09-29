@@ -1,26 +1,18 @@
 # Dynamic builds
-ARG XX_IMAGE=tonistiigi/xx
 ARG BUILDER_IMAGE=golang:1.26-bookworm
 ARG FINAL_IMAGE=debian:bookworm-slim
 
 # Build stage
-FROM --platform=${BUILDPLATFORM} ${XX_IMAGE} AS xx
 FROM --platform=${BUILDPLATFORM} ${BUILDER_IMAGE} AS builder
-
-# Copy XX scripts to the build stage
-COPY --from=xx / /
 
 # Build args
 ARG GIT_REVISION=""
+ARG BUILD_DATE=""
 
 # Platform args
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETPLATFORM
-
-# Prepare for cross-compilation
-RUN apt-get update && apt-get install -y clang lld
-RUN xx-apt install -y libc6-dev gcc
 
 # Use modules for dependencies
 WORKDIR $GOPATH/src/github.com/trisacrypto/daybreak
@@ -28,7 +20,7 @@ WORKDIR $GOPATH/src/github.com/trisacrypto/daybreak
 COPY go.mod .
 COPY go.sum .
 
-ENV CGO_ENABLED=1
+ENV CGO_ENABLED=0
 ENV GO111MODULE=on
 RUN go mod download
 RUN go mod verify
@@ -38,7 +30,10 @@ COPY pkg/ pkg/
 COPY cmd/ cmd/
 
 # Build the Daybreak binary
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} xx-go build -o /go/bin/daybreak -ldflags="-X 'github.com/trisacrypto/daybreak/pkg.GitVersion=${GIT_REVISION}'" ./cmd/daybreak && xx-verify /go/bin/daybreak
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} BUILD_DATE=$(date +%Y-%m-%d) \
+    go build -o /go/bin/daybreak \
+    -ldflags="-X 'github.com/trisacrypto/daybreak/pkg.GitVersion=${GIT_REVISION}' -X 'github.com/trisacrypto/daybreak/pkg.BuildDate=${BUILD_DATE}'" \
+    ./cmd/daybreak
 
 # Bundle/minify web assets into pkg/web/dist (esbuild Go API; no Node/npm in image)
 # RUN rm -rf pkg/web/dist

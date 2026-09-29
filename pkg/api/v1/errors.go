@@ -2,9 +2,9 @@ package api
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/trisacrypto/daybreak/pkg/errors"
+	"go.rtnl.ai/x/validation"
 )
 
 //=============================================================================
@@ -18,9 +18,9 @@ var (
 )
 
 // Error constructs a new reply for an error value.
-func Error(status int, err error, msg string) *errors.HTTPError {
+func Error(status int, err error, msg string) *errors.HTTP {
 	if err == nil {
-		return &errors.HTTPError{
+		return &errors.HTTP{
 			Status: status,
 			Err:    errors.ErrUnknown,
 			Reply:  Reply{Success: false, Error: errors.ErrUnknown.Error()},
@@ -31,45 +31,17 @@ func Error(status int, err error, msg string) *errors.HTTPError {
 		msg = err.Error()
 	}
 
-	herr := &errors.HTTPError{
+	herr := &errors.HTTP{
 		Status: status,
 		Err:    err,
 		Reply:  Reply{Success: false, Error: msg},
 	}
 
-	if verr, ok := err.(errors.ValidationErrors); ok {
+	if verr, ok := err.(validation.Errors); ok {
 		herr.Reply = validationReply(verr)
 	}
 
 	return herr
-}
-
-//=============================================================================
-// HTTP Status Errors
-//=============================================================================
-
-// StatusError decodes an APIv2 error response.
-type StatusError struct {
-	StatusCode int
-	Reply      Reply
-}
-
-// Error returns a string representation of the status error.
-func (e *StatusError) Error() string {
-	return fmt.Sprintf("[%d] %s", e.StatusCode, e.Reply.Error)
-}
-
-// ErrorStatus returns the HTTP status code from an error.
-func ErrorStatus(err error) int {
-	if err == nil {
-		return http.StatusOK
-	}
-
-	if e, ok := err.(*StatusError); ok && (e.StatusCode >= 100 && e.StatusCode < 600) {
-		return e.StatusCode
-	}
-
-	return http.StatusInternalServerError
 }
 
 //=============================================================================
@@ -90,7 +62,7 @@ type DetailError struct {
 //=============================================================================
 
 // validationReply converts validation errors to a structured error reply.
-func validationReply(errs errors.ValidationErrors) Reply {
+func validationReply(errs validation.Errors) Reply {
 	rep := Reply{Success: false}
 	if len(errs) == 1 {
 		rep.Error = errs.Error()

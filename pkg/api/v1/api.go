@@ -3,8 +3,8 @@ package api
 import (
 	"time"
 
-	"github.com/trisacrypto/daybreak/pkg/errors"
 	"go.rtnl.ai/ulid"
+	"go.rtnl.ai/x/validation"
 )
 
 // Reply contains standard fields for generic API replies.
@@ -29,13 +29,13 @@ type DTO struct {
 
 func (d *DTO) Validate(method string) (err error) {
 	if !d.ID.IsZero() {
-		err = errors.ValidationError(err, errors.ReadOnlyField("id"))
+		err = validation.Error(err, validation.ReadOnlyField("id"))
 	}
 	if !d.Created.IsZero() {
-		err = errors.ValidationError(err, errors.ReadOnlyField("created"))
+		err = validation.Error(err, validation.ReadOnlyField("created"))
 	}
 	if !d.Modified.IsZero() {
-		err = errors.ValidationError(err, errors.ReadOnlyField("modified"))
+		err = validation.Error(err, validation.ReadOnlyField("modified"))
 	}
 	return err
 }
