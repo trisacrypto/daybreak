@@ -17,6 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/trisacrypto/daybreak/pkg"
 	"github.com/trisacrypto/daybreak/pkg/config"
+	"github.com/trisacrypto/daybreak/pkg/db"
 	"go.rtnl.ai/x/probez"
 	"go.rtnl.ai/x/rlog"
 	"go.rtnl.ai/x/rlog/console"
@@ -25,6 +26,7 @@ import (
 type Server struct {
 	sync.RWMutex
 	probez.Handler
+	db      *db.DB
 	url     *url.URL
 	srv     *http.Server
 	conf    config.Config
@@ -59,6 +61,13 @@ func New() (s *Server, err error) {
 
 	// Create the root logger and set it as the default rlog logger.
 	rlog.SetDefault(rlog.New(slog.New(stdout)))
+
+	// Handle non-maintenance mode operations
+	if !s.conf.Maintenance {
+		if s.db, err = db.Open(s.conf.DatabaseDSN()); err != nil {
+			return nil, err
+		}
+	}
 
 	// Create a new router
 	gin.SetMode(s.conf.Mode)
@@ -161,9 +170,14 @@ func (s *Server) Shutdown() (err error) {
 		err = errors.Join(err, fmt.Errorf("could not shutdown the server: %w", serr))
 	}
 
+	if !s.conf.Maintenance {
+		if cerr := s.db.Close(); cerr != nil {
+			err = errors.Join(err, fmt.Errorf("could not close the database: %w", cerr))
+		}
+	}
+
 	// log the shutdown just before we shutdown telemetry
 	rlog.DebugAttrs(context.Background(), "endeavor server shutdown", slog.Any("err", err))
-
 	return err
 }
 
