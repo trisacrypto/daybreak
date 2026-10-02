@@ -1,0 +1,189 @@
+package fields
+
+import (
+	"bytes"
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+	"slices"
+)
+
+// JSONB stores raw JSON in a NOT NULL column. SQL NULL and JSON "null" scan as nil.
+type JSONB json.RawMessage
+
+// NullJSONB stores JSON in a nullable column. Check Valid after scanning.
+type NullJSONB struct {
+	Valid bool
+	JSONB JSONB
+}
+
+// JSONNull is the JSON literal null as bytes.
+var JSONNull = []byte("null")
+
+//============================================================================
+// Hashing Helpers
+//============================================================================
+
+// Normalizes the JSON bytes for hashing: values round-trip through encoding/json so
+// object keys are emitted in sorted order. Invalid JSON is returned unchanged (copy).
+// Numbers become float64 when decoded as any; empty input returns nil.
+func (j JSONB) Normalize() []byte {
+	if len(j) == 0 {
+		return nil
+	}
+
+	var v any
+	if err := json.Unmarshal(j, &v); err != nil {
+		return slices.Clone(j)
+	}
+
+	// If we successfully unmarshaled the JSON, we should be able to marshal it back
+	// without an error. This guard is here for types that implement json.Marshaler
+	// and return a non-json error when marshaling.
+	out, err := json.Marshal(v)
+	if err != nil {
+		return slices.Clone(j)
+	}
+
+	return out
+}
+
+//============================================================================
+// JSONB Methods
+//============================================================================
+
+// Scan implements [database/sql.Scanner].
+func (j *JSONB) Scan(src any) error {
+	if src == nil {
+		*j = nil
+		return nil
+	}
+
+	switch src := src.(type) {
+	case []byte:
+		*j = append((*j)[0:0], src...)
+	case string:
+		*j = append((*j)[0:0], src...)
+	default:
+		return fmt.Errorf("cannot scan type %T into JSONB", src)
+	}
+
+	// If the JSONB value is null then set the value to nil
+	if bytes.Equal([]byte(*j), JSONNull) {
+		*j = nil
+	}
+	return nil
+}
+
+// Value implements [database/sql/driver.Valuer].
+func (j JSONB) Value() (driver.Value, error) {
+	if len(j) == 0 {
+		return nil, nil
+	}
+	return []byte(j), nil
+}
+
+// IsNull reports whether the value is empty or the JSON literal null.
+func (j JSONB) IsNull() bool {
+	return len(j) == 0 || bytes.Equal(j, JSONNull)
+}
+
+// Equal compares JSON values after normalization so key order differences do not matter.
+func (j JSONB) Equal(other JSONB) bool {
+	if j.IsNull() && other.IsNull() {
+		return true
+	}
+	return bytes.Equal(j.Normalize(), other.Normalize())
+}
+
+// UnmarshalTo decodes the JSON into dst. A nil or empty value is a no-op.
+func (j JSONB) UnmarshalTo(dst any) error {
+	if len(j) == 0 {
+		return nil
+	}
+	return json.Unmarshal(j, dst)
+}
+
+// MarshalFrom JSON-encodes src into the field. A nil src clears the field.
+func (j *JSONB) MarshalFrom(src any) (err error) {
+	if src == nil {
+		*j = nil
+		return nil
+	}
+
+	var data []byte
+	if data, err = json.Marshal(src); err != nil {
+		return err
+	}
+
+	*j = append((*j)[0:0], data...)
+	return nil
+}
+
+//============================================================================
+// NullJSONB Methods
+//============================================================================
+
+// Scan implements [database/sql.Scanner].
+func (n *NullJSONB) Scan(src any) (err error) {
+	if src == nil {
+		n.JSONB, n.Valid = nil, false
+		return nil
+	}
+
+	if err = n.JSONB.Scan(src); err != nil {
+		n.Valid = false
+		return err
+	}
+
+	n.Valid = !n.JSONB.IsNull()
+	return nil
+}
+
+// Value implements [database/sql/driver.Valuer].
+func (n NullJSONB) Value() (driver.Value, error) {
+	if !n.Valid {
+		return nil, nil
+	}
+	return n.JSONB.Value()
+}
+
+// UnmarshalTo decodes the JSON when Valid is true.
+func (j NullJSONB) UnmarshalTo(dst any) error {
+	if !j.Valid {
+		return nil
+	}
+	return j.JSONB.UnmarshalTo(dst)
+}
+
+// MarshalFrom JSON-encodes src and sets Valid. Nil or JSON null becomes SQL NULL.
+func (j *NullJSONB) MarshalFrom(src any) (err error) {
+	if err = j.JSONB.MarshalFrom(src); err != nil {
+		j.Valid = false
+		return err
+	}
+
+	if j.JSONB.IsNull() {
+		j.JSONB = nil
+		j.Valid = false
+	} else {
+		j.Valid = true
+	}
+
+	return nil
+}
+
+// Equal compares nullable JSON values with SQL NULL normalization.
+func (j NullJSONB) Equal(other NullJSONB) bool {
+	if j.JSONB.IsNull() {
+		j.Valid = false
+	}
+	if other.JSONB.IsNull() {
+		other.Valid = false
+	}
+
+	if j.Valid != other.Valid {
+		return false
+	}
+	return j.JSONB.Equal(other.JSONB)
+}
