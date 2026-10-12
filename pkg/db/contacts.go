@@ -36,11 +36,21 @@ func (c *Contact) Scan(scanner Scanner) error {
 // Transaction CRUD
 //============================================================================
 
-const listContactsSQL = `SELECT * FROM contacts WHERE company_id=:companyID;`
+const listContactsSQL = `SELECT * FROM contacts;`
 
-func (tx *Tx) ListContacts(companyID uuid.UUID) (contacts *Iterator[*Contact], err error) {
+func (tx *Tx) ListContacts() (contacts *Iterator[*Contact], err error) {
 	var rows *sql.Rows
-	if rows, err = tx.Query(listContactsSQL, sql.Named("companyID", companyID)); err != nil {
+	if rows, err = tx.Query(listContactsSQL); err != nil {
+		return nil, err
+	}
+	return Iterate[*Contact](rows), nil
+}
+
+const listCompanyContactsSQL = `SELECT * FROM contacts WHERE company_id=:companyID;`
+
+func (tx *Tx) ListCompanyContacts(companyID uuid.UUID) (contacts *Iterator[*Contact], err error) {
+	var rows *sql.Rows
+	if rows, err = tx.Query(listCompanyContactsSQL, sql.Named("companyID", companyID)); err != nil {
 		return nil, err
 	}
 	return Iterate[*Contact](rows), nil
@@ -118,7 +128,7 @@ func (tx *Tx) DeleteContact(id uuid.UUID) (err error) {
 // Database CRUD
 //============================================================================
 
-func (db *DB) ListContacts(ctx context.Context, companyID uuid.UUID) (_ []*Contact, err error) {
+func (db *DB) ListContacts(ctx context.Context) (_ []*Contact, err error) {
 	var tx *Tx
 	if tx, err = db.Begin(ctx, &sql.TxOptions{ReadOnly: true}); err != nil {
 		return nil, err
@@ -126,7 +136,21 @@ func (db *DB) ListContacts(ctx context.Context, companyID uuid.UUID) (_ []*Conta
 	defer tx.Rollback()
 
 	var iter *Iterator[*Contact]
-	if iter, err = tx.ListContacts(companyID); err != nil {
+	if iter, err = tx.ListContacts(); err != nil {
+		return nil, err
+	}
+	return iter.List()
+}
+
+func (db *DB) ListCompanyContacts(ctx context.Context, companyID uuid.UUID) (_ []*Contact, err error) {
+	var tx *Tx
+	if tx, err = db.Begin(ctx, &sql.TxOptions{ReadOnly: true}); err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	var iter *Iterator[*Contact]
+	if iter, err = tx.ListCompanyContacts(companyID); err != nil {
 		return nil, err
 	}
 	return iter.List()

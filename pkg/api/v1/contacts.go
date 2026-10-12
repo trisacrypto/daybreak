@@ -15,13 +15,14 @@ import (
 )
 
 type Contact struct {
-	ID       uuid.UUID       `json:"id"`
-	Name     string          `json:"name"`
-	Email    string          `json:"email"`
-	Role     string          `json:"role"`
-	IVMS101  json.RawMessage `json:"ivms101"`
-	Created  time.Time       `json:"created"`
-	Modified time.Time       `json:"modified"`
+	ID        uuid.UUID       `json:"id"`
+	Name      string          `json:"name"`
+	Email     string          `json:"email"`
+	Role      string          `json:"role"`
+	IVMS101   json.RawMessage `json:"ivms101"`
+	CompanyID uuid.UUID       `json:"company_id,omitzero"`
+	Created   time.Time       `json:"created"`
+	Modified  time.Time       `json:"modified"`
 }
 
 func NewContact(model *db.Contact) *Contact {
@@ -37,12 +38,17 @@ func NewContact(model *db.Contact) *Contact {
 }
 
 func (c *Contact) Model() *db.Contact {
-	return &db.Contact{
+	contact := &db.Contact{
 		Name:    c.Name,
 		Email:   c.Email,
 		Role:    sql.NullString{String: c.Role, Valid: c.Role != ""},
 		IVMS101: fields.NullJSONB{JSONB: fields.JSONB(c.IVMS101), Valid: len(c.IVMS101) > 0},
 	}
+
+	if c.CompanyID != uuid.Nil {
+		contact.CompanyID = c.CompanyID
+	}
+	return contact
 }
 
 func (c *Contact) Validate(method string) (err error) {
