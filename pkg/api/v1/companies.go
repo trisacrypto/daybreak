@@ -56,7 +56,7 @@ func (c *Company) Model() *db.Company {
 		Country:          c.Country,
 		BusinessCategory: sql.NullString{String: c.BusinessCategory, Valid: c.BusinessCategory != ""},
 		VASPCategories:   c.VASPCategories,
-		IVMS101:          fields.NullJSONB{JSONB: fields.JSONB(c.IVMS101), Valid: c.IVMS101 != nil},
+		IVMS101:          fields.NullJSONB{JSONB: fields.JSONB(c.IVMS101), Valid: len(c.IVMS101) > 0},
 		VerifiedOn:       fields.Time(c.VerifiedOn),
 	}
 }
@@ -112,14 +112,17 @@ func (c *Company) Validate(method string) (err error) {
 		err = validation.Error(err, verr)
 	}
 
-	var person *ivms101.LegalPerson
-	if perr := json.Unmarshal(c.IVMS101, &person); perr != nil {
-		err = validation.Error(err, validation.Invalid("ivms101", err.Error()))
-	} else {
-		if perr := ivms101.Validate(person); perr != nil {
+	// Change null or empty object to an empty IVMS101 record
+	c.IVMS101 = normalizeJSON(c.IVMS101)
+	if len(c.IVMS101) > 0 {
+		var person *ivms101.LegalPerson
+		if perr := json.Unmarshal(c.IVMS101, &person); perr != nil {
 			err = validation.Error(err, validation.Invalid("ivms101", perr.Error()))
+		} else {
+			if perr := ivms101.Validate(person); perr != nil {
+				err = validation.Error(err, validation.Invalid("ivms101", perr.Error()))
+			}
 		}
 	}
-
 	return err
 }

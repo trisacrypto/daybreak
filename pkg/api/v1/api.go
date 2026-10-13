@@ -1,11 +1,29 @@
 package api
 
 import (
+	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"go.rtnl.ai/ulid"
 	"go.rtnl.ai/x/validation"
 )
+
+type Client interface {
+	Status(context.Context) (*StatusReply, error)
+	ListCompanies(context.Context) ([]*Company, error)
+	CreateCompany(context.Context, *Company) (*Company, error)
+	RetrieveCompany(context.Context, uuid.UUID) (*Company, error)
+	UpdateCompany(context.Context, *Company) (*Company, error)
+	DeleteCompany(context.Context, uuid.UUID) error
+	ListCompanyContacts(context.Context, uuid.UUID) ([]*Contact, error)
+	CreateCompanyContact(context.Context, *Contact) (*Contact, error)
+	ListContacts(context.Context) ([]*Contact, error)
+	CreateContact(context.Context, *Contact) (*Contact, error)
+	RetrieveContact(context.Context, uuid.UUID) (*Contact, error)
+	UpdateContact(context.Context, *Contact) (*Contact, error)
+	DeleteContact(context.Context, uuid.UUID) error
+}
 
 // Reply contains standard fields for generic API replies.
 type Reply struct {

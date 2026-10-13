@@ -79,14 +79,16 @@ func (c *Contact) Validate(method string) (err error) {
 
 	c.Role = strings.TrimSpace(c.Role)
 
-	var person *ivms101.NaturalPerson
-	if perr := json.Unmarshal(c.IVMS101, &person); perr != nil {
-		err = validation.Error(err, validation.Invalid("ivms101", perr.Error()))
-	} else {
-		if perr := ivms101.Validate(person); perr != nil {
+	c.IVMS101 = normalizeJSON(c.IVMS101)
+	if len(c.IVMS101) > 0 {
+		var person *ivms101.NaturalPerson
+		if perr := json.Unmarshal(c.IVMS101, &person); perr != nil {
 			err = validation.Error(err, validation.Invalid("ivms101", perr.Error()))
+		} else {
+			if perr := ivms101.Validate(person); perr != nil {
+				err = validation.Error(err, validation.Invalid("ivms101", perr.Error()))
+			}
 		}
 	}
-
 	return err
 }
