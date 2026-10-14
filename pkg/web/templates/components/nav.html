@@ -1,0 +1,15 @@
+{{ define "nav" }}
+<!-- Main Navigation -->
+<ul class="navbar-nav">
+  <li class="nav-item">
+    <a class="nav-link " href="/">
+      <i class="fe fe-sunrise"></i> Daybreak Dashboard
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link " href="#">
+      <i class="fe fe-server"></i> Node Info <span class="badge bg-primary ms-auto">v{{ .ShortVersion }}</span>
+    </a>
+  </li>
+</ul>
+{{ end }}

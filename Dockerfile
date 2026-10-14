@@ -35,10 +35,6 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} BUILD_DATE=$(date +%Y-%m-%d) \
     -ldflags="-X 'github.com/trisacrypto/daybreak/pkg.GitVersion=${GIT_REVISION}' -X 'github.com/trisacrypto/daybreak/pkg.BuildDate=${BUILD_DATE}'" \
     ./cmd/daybreak
 
-# Bundle/minify web assets into pkg/web/dist (esbuild Go API; no Node/npm in image)
-# RUN rm -rf pkg/web/dist
-# RUN /go/bin/daybreak staticfiles -o pkg/web/dist
-
 # Final stage
 FROM ${FINAL_IMAGE} AS final
 
@@ -54,7 +50,7 @@ RUN apt-get update && \
 COPY --from=builder /go/bin/daybreak /usr/local/bin/daybreak
 
 # Copy compiled static assets (see cmd/build-assets)
-# COPY --from=builder /go/src/github.com/trisacrypto/daybreak/pkg/web/dist /var/www/daybreak/static
+COPY --from=builder /go/src/github.com/trisacrypto/daybreak/pkg/web/static /var/www/daybreak/static
 
 ENV DAYBREAK_STATIC_SERVE=true
 ENV DAYBREAK_STATIC_URL=/static

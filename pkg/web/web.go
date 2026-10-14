@@ -16,8 +16,7 @@ import (
 	"github.com/trisacrypto/daybreak/pkg/config"
 	"go.rtnl.ai/x/humanize"
 	"go.rtnl.ai/x/rlog"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"go.rtnl.ai/x/typecase"
 )
 
 //go:embed all:templates
@@ -42,6 +41,7 @@ func Templates() fs.FS {
 // Creates a new template renderer from the default templates.
 // The required templates will be specified by its path relative to the templates directory.
 func NewRender(fsys fs.FS) (render *Render, err error) {
+	// cSpell:ignore fsys
 	render = &Render{
 		templates: make(map[string]*template.Template),
 	}
@@ -155,11 +155,15 @@ func (r *Render) AddPattern(fsys fs.FS, pattern string, includes ...string) (err
 func (r *Render) FuncMap() template.FuncMap {
 	if r.funcs == nil {
 		r.funcs = template.FuncMap{
+			"camel":     camel,
+			"country":   country,
 			"datetime":  datetime,
+			"flag":      flag,
 			"isNil":     isNil,
 			"join":      join,
 			"lowercase": lowercase,
 			"moment":    humanize.Time,
+			"rfc3339":   rfc3339,
 			"static":    static(),
 			"titlecase": titlecase,
 			"truncate":  truncate,
@@ -173,9 +177,16 @@ func (r *Render) FuncMap() template.FuncMap {
 // String Helpers
 // ===========================================================================
 
+func country(s string) string {
+	return ""
+}
+
+func flag(s string) string {
+	return ""
+}
+
 func titlecase(s string) string {
-	title := cases.Title(language.English)
-	return title.String(s)
+	return typecase.Title(s)
 }
 
 func lowercase(s string) string {
@@ -184,6 +195,10 @@ func lowercase(s string) string {
 
 func uppercase(s string) string {
 	return strings.ToUpper(s)
+}
+
+func camel(s string) string {
+	return typecase.Camel(s)
 }
 
 func truncate(s string, n int) string {
@@ -195,6 +210,10 @@ func truncate(s string, n int) string {
 
 func datetime(t time.Time) string {
 	return t.Format("January 2, 2006 3:04 PM")
+}
+
+func rfc3339(t time.Time) string {
+	return t.Format(time.RFC3339)
 }
 
 func isNil(v any) bool {

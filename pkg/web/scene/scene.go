@@ -18,21 +18,15 @@ var (
 
 // Keys for default Scene context items
 const (
-	Version         = "Version"
-	ShortVersion    = "ShortVersion"
-	Revision        = "Revision"
-	BuildDate       = "BuildDate"
-	Page            = "Page"
-	IsAuthenticated = "IsAuthenticated"
-	User            = "User"
-	LogoutURL       = "LogoutURL"
-	APIData         = "APIData"
-	SessionData     = "SessionData"
-	Path            = "Path"
-	UserID          = "UserID"
-	Resource        = "Resource"
-	Name            = "Name"
-	ResourceURL     = "ResourceURL"
+	Version      = "Version"
+	ShortVersion = "ShortVersion"
+	Revision     = "Revision"
+	BuildDate    = "BuildDate"
+	Page         = "Page"
+	User         = "User"
+	APIData      = "APIData"
+	Path         = "Path"
+	LogoutURL    = "LogoutURL"
 )
 
 type Scene map[string]any
