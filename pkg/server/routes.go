@@ -65,13 +65,35 @@ func (s *Server) setupRoutes() (err error) {
 	// Web UI routes (authenticated)
 	ui := s.router.Group("")
 	{
-		ui.GET("/", s.Dashboard)
+		ui.GET("/", Wrap("ui.dashboard", s.Dashboard))
 	}
 
 	// API routes (unauthenticated)
 	v1o := s.router.Group("/v1")
 	{
 		v1o.GET("/status", s.Status)
+	}
+
+	// Authenticated API Routes
+	v1a := s.router.Group("/v1")
+	{
+		// Companies Resource
+		v1a.GET("/companies", Wrap("api.companies.list", s.ListCompanies))
+		v1a.POST("/companies", Wrap("api.companies.create", s.CreateCompany))
+		v1a.GET("/companies/:id", Wrap("api.companies.retrieve", s.RetrieveCompany))
+		v1a.PUT("/companies/:id", Wrap("api.companies.update", s.UpdateCompany))
+		v1a.DELETE("/companies/:id", Wrap("api.companies.delete", s.DeleteCompany))
+
+		// Nested Company Contacts Helper Actions
+		v1a.GET("/companies/:id/contacts", Wrap("api.companies.contacts.list", s.ListCompanyContacts))
+		v1a.POST("/companies/:id/contacts", Wrap("api.companies.contacts.create", s.CreateCompanyContact))
+
+		// Contacts Resource
+		v1a.GET("/contacts", Wrap("api.contacts.list", s.ListContacts))
+		v1a.POST("/contacts", Wrap("api.contacts.create", s.CreateContact))
+		v1a.GET("/contacts/:id", Wrap("api.contacts.retrieve", s.RetrieveContact))
+		v1a.PUT("/contacts/:id", Wrap("api.contacts.update", s.UpdateContact))
+		v1a.DELETE("/contacts/:id", Wrap("api.contacts.delete", s.DeleteContact))
 	}
 
 	return nil

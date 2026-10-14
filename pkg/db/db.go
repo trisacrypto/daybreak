@@ -165,10 +165,14 @@ func dbe(err error) error {
 
 	if sqliteErr, ok := err.(*modernc.Error); ok {
 		switch sqliteErr.Code() {
+		case sqlite3.SQLITE_NOTFOUND:
+			return errors.Join(errors.ErrNotFound, err)
 		case sqlite3.SQLITE_READONLY:
 			return errors.Join(errors.ErrReadOnly, err)
 		case sqlite3.SQLITE_CONSTRAINT_UNIQUE:
 			return errors.Join(errors.ErrAlreadyExists, err)
+		case sqlite3.SQLITE_CONSTRAINT_FOREIGNKEY:
+			return errors.Join(errors.ErrForeignKeyViolation, err)
 		}
 	}
 

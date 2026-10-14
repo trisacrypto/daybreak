@@ -18,6 +18,7 @@ import (
 	"github.com/trisacrypto/daybreak/pkg"
 	"github.com/trisacrypto/daybreak/pkg/config"
 	"github.com/trisacrypto/daybreak/pkg/db"
+	"go.opentelemetry.io/otel"
 	"go.rtnl.ai/x/probez"
 	"go.rtnl.ai/x/rlog"
 	"go.rtnl.ai/x/rlog/console"
@@ -34,6 +35,11 @@ type Server struct {
 	router  *gin.Engine
 	started time.Time
 }
+
+var (
+	// tracer creates handler and helper spans for the HTTP server.
+	tracer = otel.Tracer("github.com/trisacrypto/daybreak/server")
+)
 
 func New() (s *Server, err error) {
 	// Create a new server instance

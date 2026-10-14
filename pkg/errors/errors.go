@@ -11,15 +11,16 @@ var (
 	ErrMethodNotAllowed = errors.New("method not allowed")
 
 	// Store/Database Errors
-	ErrInvalidDSN         = errors.New("invalid database DSN")
-	ErrDatabase           = errors.New("database error")
-	ErrSQLiteForeignKeys  = errors.New("could not enable sqlite foreign keys")
-	ErrSQLiteQueryOnly    = errors.New("could not set sqlite to query_only mode")
-	ErrReadOnly           = errors.New("cannot perform operation in read-only mode")
-	ErrMissingAssociation = errors.New("associated record(s) not cached on model")
-	ErrMissingReference   = errors.New("missing id of foreign key reference")
-	ErrNotFound           = errors.New("record not found")
-	ErrAlreadyExists      = errors.New("record already exists in database")
+	ErrInvalidDSN          = errors.New("invalid database DSN")
+	ErrDatabase            = errors.New("database error")
+	ErrSQLiteForeignKeys   = errors.New("could not enable sqlite foreign keys")
+	ErrSQLiteQueryOnly     = errors.New("could not set sqlite to query_only mode")
+	ErrReadOnly            = errors.New("cannot perform operation in read-only mode")
+	ErrMissingAssociation  = errors.New("associated record(s) not cached on model")
+	ErrMissingReference    = errors.New("missing id of foreign key reference")
+	ErrNotFound            = errors.New("record not found")
+	ErrAlreadyExists       = errors.New("record already exists in database")
+	ErrForeignKeyViolation = errors.New("foreign key violation")
 
 	// Development errors
 	ErrUnknown        = errors.New("an unknown error occurred")
