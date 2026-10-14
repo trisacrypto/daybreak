@@ -15,6 +15,6 @@ import (
 
 func (s *Server) Dashboard(ctx context.Context, c *gin.Context) *errors.HTTP {
 	data := scene.New(c).ForPage("dashboard")
-	c.HTML(http.StatusOK, "app/dashboard/index.html", data)
+	c.HTML(http.StatusOK, "dashboard/daybreak/list.html", data)
 	return nil
 }
