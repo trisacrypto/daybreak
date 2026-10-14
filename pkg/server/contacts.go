@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -94,14 +95,8 @@ func (s *Server) CreateContact(ctx context.Context, c *gin.Context) *errors.HTTP
 		return api.Error(http.StatusUnprocessableEntity, validation.Required("company_id"), "company ID is required")
 	}
 
-	if err = s.db.CreateContact(ctx, contact); err != nil {
-		if errors.Is(err, errors.ErrNotFound) || errors.Is(err, errors.ErrMissingReference) {
-			return api.Error(http.StatusNotFound, err, "company not found")
-		}
-		if errors.Is(err, errors.ErrAlreadyExists) {
-			return api.Error(http.StatusConflict, err, "contact already exists")
-		}
-		return api.Error(http.StatusInternalServerError, err, "failed to create contact")
+	if herr := s.createContact(ctx, contact); herr != nil {
+		return herr
 	}
 
 	if htmx.TriggerCreated(c, "contact") {
@@ -124,6 +119,10 @@ func (s *Server) CreateCompanyContact(ctx context.Context, c *gin.Context) *erro
 		return api.Error(http.StatusNotFound, err, "invalid company ID")
 	}
 
+	if companyID == uuid.Nil {
+		return api.Error(http.StatusBadRequest, validation.Required("company_id"), "invalid company ID")
+	}
+
 	in = &api.Contact{}
 	if err = c.BindJSON(in); err != nil {
 		return api.Error(http.StatusBadRequest, err, "could not parse request")
@@ -138,14 +137,9 @@ func (s *Server) CreateCompanyContact(ctx context.Context, c *gin.Context) *erro
 		return api.Error(http.StatusUnprocessableEntity, validation.Invalid("company_id", "company ID does not match"), "company ID does not match")
 	}
 
-	if err = s.db.CreateContact(ctx, contact); err != nil {
-		if errors.Is(err, errors.ErrNotFound) || errors.Is(err, errors.ErrMissingReference) {
-			return api.Error(http.StatusNotFound, err, "company not found")
-		}
-		if errors.Is(err, errors.ErrAlreadyExists) {
-			return api.Error(http.StatusConflict, err, "contact already exists")
-		}
-		return api.Error(http.StatusInternalServerError, err, "failed to create contact")
+	contact.CompanyID = companyID
+	if herr := s.createContact(ctx, contact); herr != nil {
+		return herr
 	}
 
 	if htmx.TriggerCreated(c, "contact") {
@@ -153,6 +147,39 @@ func (s *Server) CreateCompanyContact(ctx context.Context, c *gin.Context) *erro
 	}
 
 	c.JSON(http.StatusCreated, api.NewContact(contact))
+	return nil
+}
+
+func (s *Server) createContact(ctx context.Context, contact *db.Contact) *errors.HTTP {
+	var (
+		tx  *db.Tx
+		err error
+	)
+
+	if tx, err = s.db.Begin(ctx, &sql.TxOptions{ReadOnly: false}); err != nil {
+		return api.Error(http.StatusInternalServerError, err, "failed to begin transaction")
+	}
+	defer tx.Rollback()
+
+	// Ensure the company exists
+	if _, err = tx.RetrieveCompany(contact.CompanyID); err != nil {
+		if errors.Is(err, errors.ErrNotFound) {
+			return api.Error(http.StatusNotFound, err, "company not found")
+		}
+		return api.Error(http.StatusInternalServerError, err, "failed to retrieve company")
+	}
+
+	if err = tx.CreateContact(contact); err != nil {
+		if errors.Is(err, errors.ErrAlreadyExists) {
+			return api.Error(http.StatusConflict, err, "contact already exists")
+		}
+		return api.Error(http.StatusInternalServerError, err, "failed to create contact")
+	}
+
+	if err = tx.Commit(); err != nil {
+		return api.Error(http.StatusInternalServerError, err, "failed to commit transaction")
+	}
+
 	return nil
 }
 
@@ -210,14 +237,31 @@ func (s *Server) UpdateContact(ctx context.Context, c *gin.Context) *errors.HTTP
 	contact = in.Model()
 	contact.ID = contactID
 
-	if err = s.db.UpdateContact(ctx, contact); err != nil {
+	var tx *db.Tx
+	if tx, err = s.db.Begin(ctx, &sql.TxOptions{ReadOnly: false}); err != nil {
+		return api.Error(http.StatusInternalServerError, err, "failed to begin transaction")
+	}
+	defer tx.Rollback()
+
+	if err = tx.UpdateContact(contact); err != nil {
 		if errors.Is(err, errors.ErrNotFound) {
 			return api.Error(http.StatusNotFound, err, "contact not found")
 		}
 		if errors.Is(err, errors.ErrAlreadyExists) {
 			return api.Error(http.StatusConflict, err, "contact already exists")
 		}
+		if errors.Is(err, errors.ErrForeignKeyViolation) {
+			return api.Error(http.StatusNotFound, err, "company not found")
+		}
 		return api.Error(http.StatusInternalServerError, err, "failed to update contact")
+	}
+
+	if contact, err = tx.RetrieveContact(contactID); err != nil {
+		return api.Error(http.StatusInternalServerError, err, "failed to retrieve contact after update")
+	}
+
+	if err = tx.Commit(); err != nil {
+		return api.Error(http.StatusInternalServerError, err, "failed to commit transaction")
 	}
 
 	out = api.NewContact(contact)

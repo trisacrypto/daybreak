@@ -17,7 +17,7 @@ type Client interface {
 	UpdateCompany(context.Context, *Company) (*Company, error)
 	DeleteCompany(context.Context, uuid.UUID) error
 	ListCompanyContacts(context.Context, uuid.UUID) ([]*Contact, error)
-	CreateCompanyContact(context.Context, *Contact) (*Contact, error)
+	CreateCompanyContact(context.Context, uuid.UUID, *Contact) (*Contact, error)
 	ListContacts(context.Context) ([]*Contact, error)
 	CreateContact(context.Context, *Contact) (*Contact, error)
 	RetrieveContact(context.Context, uuid.UUID) (*Contact, error)

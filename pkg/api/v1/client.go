@@ -121,8 +121,7 @@ func (c *APIv1) UpdateCompany(ctx context.Context, in *Company) (out *Company, e
 	ep := fmt.Sprintf("%s/%s", companiesEP, in.ID)
 
 	// Ensure read-only fields are cleared
-	in = in.Clone()
-	if err = c.Update(ctx, ep, in, &out); err != nil {
+	if err = c.Update(ctx, ep, in.Clone(), &out); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -153,12 +152,8 @@ func (c *APIv1) ListCompanyContacts(ctx context.Context, id uuid.UUID) (out []*C
 	return out, nil
 }
 
-func (c *APIv1) CreateCompanyContact(ctx context.Context, in *Contact) (out *Contact, err error) {
-	if in.CompanyID == uuid.Nil {
-		return nil, fmt.Errorf("company ID is required")
-	}
-
-	ep := fmt.Sprintf(companyContactsEP, in.CompanyID)
+func (c *APIv1) CreateCompanyContact(ctx context.Context, companyID uuid.UUID, in *Contact) (out *Contact, err error) {
+	ep := fmt.Sprintf(companyContactsEP, companyID)
 	if err = c.Create(ctx, ep, in, &out); err != nil {
 		return nil, err
 	}
@@ -198,7 +193,9 @@ func (c *APIv1) RetrieveContact(ctx context.Context, id uuid.UUID) (out *Contact
 
 func (c *APIv1) UpdateContact(ctx context.Context, in *Contact) (out *Contact, err error) {
 	ep := fmt.Sprintf("%s/%s", contactsEP, in.ID)
-	if err = c.Update(ctx, ep, in, &out); err != nil {
+
+	// Ensure read-only fields are cleared
+	if err = c.Update(ctx, ep, in.Clone(), &out); err != nil {
 		return nil, err
 	}
 	return out, nil

@@ -171,6 +171,8 @@ func dbe(err error) error {
 			return errors.Join(errors.ErrReadOnly, err)
 		case sqlite3.SQLITE_CONSTRAINT_UNIQUE:
 			return errors.Join(errors.ErrAlreadyExists, err)
+		case sqlite3.SQLITE_CONSTRAINT_FOREIGNKEY:
+			return errors.Join(errors.ErrForeignKeyViolation, err)
 		}
 	}
 

@@ -27,13 +27,14 @@ type Contact struct {
 
 func NewContact(model *db.Contact) *Contact {
 	return &Contact{
-		ID:       model.ID,
-		Name:     model.Name,
-		Email:    model.Email,
-		Role:     model.Role.String,
-		IVMS101:  json.RawMessage(model.IVMS101.JSONB),
-		Created:  model.Created.Time(),
-		Modified: model.Modified.Time(),
+		ID:        model.ID,
+		Name:      model.Name,
+		Email:     model.Email,
+		Role:      model.Role.String,
+		IVMS101:   json.RawMessage(model.IVMS101.JSONB),
+		CompanyID: model.CompanyID,
+		Created:   model.Created.Time(),
+		Modified:  model.Modified.Time(),
 	}
 }
 
@@ -91,4 +92,14 @@ func (c *Contact) Validate(method string) (err error) {
 		}
 	}
 	return err
+}
+
+func (c *Contact) Clone() *Contact {
+	return &Contact{
+		Name:      c.Name,
+		Email:     c.Email,
+		Role:      c.Role,
+		IVMS101:   c.IVMS101,
+		CompanyID: c.CompanyID,
+	}
 }

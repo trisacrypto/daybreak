@@ -574,27 +574,10 @@ func TestClient_CreateCompanyContact(t *testing.T) {
 		})
 
 		in := contactRequest(fixture)
-		reply, err := client.CreateCompanyContact(context.Background(), in)
+		reply, err := client.CreateCompanyContact(context.Background(), company.ID, in)
 		require.NoError(t, err)
 		require.Equal(t, in, received, "request body should match the input")
 		require.Equal(t, fixture, reply)
-	})
-
-	t.Run("MissingCompanyID", func(t *testing.T) {
-		// The client refuses to send the request without a company ID to build the endpoint.
-		var called bool
-		client := Serve(t, http.MethodPost, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
-			called = true
-			WriteJSON(w, http.StatusCreated, fixture)
-			return nil
-		})
-
-		in := contactRequest(fixture)
-		in.CompanyID = uuid.Nil
-		reply, err := client.CreateCompanyContact(context.Background(), in)
-		require.Nil(t, reply)
-		require.EqualError(t, err, "company ID is required")
-		require.False(t, called, "expected no request to be sent to the server")
 	})
 
 	t.Run("ValidationError", func(t *testing.T) {
@@ -605,7 +588,7 @@ func TestClient_CreateCompanyContact(t *testing.T) {
 
 		in := contactRequest(fixture)
 		in.Email = ""
-		reply, err := client.CreateCompanyContact(context.Background(), in)
+		reply, err := client.CreateCompanyContact(context.Background(), company.ID, in)
 		require.Nil(t, reply)
 		require.Error(t, err)
 		require.IsType(t, &api.StatusError{}, err)
@@ -619,7 +602,7 @@ func TestClient_CreateCompanyContact(t *testing.T) {
 			return nil
 		})
 
-		reply, err := client.CreateCompanyContact(context.Background(), contactRequest(fixture))
+		reply, err := client.CreateCompanyContact(context.Background(), company.ID, contactRequest(fixture))
 		require.Nil(t, reply)
 		require.Error(t, err)
 		require.IsType(t, &api.StatusError{}, err)
@@ -633,7 +616,7 @@ func TestClient_CreateCompanyContact(t *testing.T) {
 			return nil
 		})
 
-		reply, err := client.CreateCompanyContact(context.Background(), contactRequest(fixture))
+		reply, err := client.CreateCompanyContact(context.Background(), company.ID, contactRequest(fixture))
 		require.Nil(t, reply)
 		require.Error(t, err)
 		require.IsType(t, &api.StatusError{}, err)
@@ -813,6 +796,7 @@ func TestClient_UpdateContact(t *testing.T) {
 			if err := json.NewDecoder(r.Body).Decode(received); err != nil {
 				return api.Error(http.StatusBadRequest, err, "")
 			}
+
 			WriteJSON(w, http.StatusOK, fixture)
 			return nil
 		})
@@ -824,7 +808,7 @@ func TestClient_UpdateContact(t *testing.T) {
 
 		reply, err := client.UpdateContact(context.Background(), in)
 		require.NoError(t, err)
-		require.Equal(t, in, received, "request body should match the input")
+		require.Equal(t, in.Clone(), received, "request body should match the input")
 		require.Equal(t, fixture, reply)
 	})
 

@@ -9,7 +9,7 @@ import (
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
 )
 
-// cSpell:ignore globex
+// cSpell:ignore globex AKFAMMDK GSAT numerique
 func (s *Suite) TestCompanyResource() {
 	s.T().Cleanup(s.ResetDB)
 
