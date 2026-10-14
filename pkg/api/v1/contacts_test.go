@@ -16,6 +16,7 @@ import (
 const testNaturalPerson = `{"name": {"nameIdentifier": [{"primaryIdentifier": "Smith", "secondaryIdentifier": "Bob", "nameIdentifierType": "LEGL"}]}, "countryOfResidence": "GB"}`
 
 // mockContact returns a fully valid contact request payload.
+// cSpell: ignore bobsvasp cust LEGL SOCS
 func mockContact() *api.Contact {
 	return &api.Contact{
 		Name:    "Bob Smith",

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/trisacrypto/daybreak/pkg/db/fields"
+	"github.com/trisacrypto/daybreak/pkg/errors"
 )
 
 type Company struct {
@@ -46,14 +47,14 @@ func (c *Company) Scan(scanner Scanner) error {
 // Transaction CRUD
 //============================================================================
 
-const listCompaniesSQL = `SELECT * FROM companies;`
+const listCompaniesSQL = `SELECT id, lei, domain, name, website, country, business_category, vasp_categories, ivms101, primary_contact_id, verified_on, created, modified FROM companies;`
 
-func (tx *Tx) ListCompanies() (companies *Iterator[*Company], err error) {
+func (tx *Tx) ListCompanies() (companies *Iterator[Company, *Company], err error) {
 	var rows *sql.Rows
 	if rows, err = tx.Query(listCompaniesSQL); err != nil {
 		return nil, err
 	}
-	return Iterate[*Company](rows), nil
+	return Iterate[Company](rows), nil
 }
 
 const createCompanySQL = `INSERT INTO companies
@@ -91,7 +92,7 @@ func (tx *Tx) CreateCompany(company *Company) (err error) {
 	return nil
 }
 
-const retrieveCompanySQL = `SELECT * FROM companies WHERE id=:id;`
+const retrieveCompanySQL = `SELECT id, lei, domain, name, website, country, business_category, vasp_categories, ivms101, primary_contact_id, verified_on, created, modified FROM companies WHERE id=:id;`
 
 func (tx *Tx) RetrieveCompany(id uuid.UUID) (company *Company, err error) {
 	company = &Company{}
@@ -102,7 +103,7 @@ func (tx *Tx) RetrieveCompany(id uuid.UUID) (company *Company, err error) {
 }
 
 const updateCompanySQL = `UPDATE companies SET
-lei=:lei, domain=:domain, name=:name, website=:website, country=:country, business_category=:businessCategory, vasp_categories=:vaspCategories, ivms101=:ivms101, primary_contact_id=:primaryContactID, verified_on=:verifiedOn, modified=:modified
+lei=:lei, domain=:domain, name=:name, website=:website, country=:country, business_category=:businessCategory, vasp_categories=:vaspCategories, ivms101=:ivms101, primary_contact_id=:primaryContactID, modified=:modified
 WHERE id=:id;`
 
 func (tx *Tx) UpdateCompany(company *Company) (err error) {
@@ -119,12 +120,44 @@ func (tx *Tx) UpdateCompany(company *Company) (err error) {
 		{Name: "vaspCategories", Value: company.VASPCategories},
 		{Name: "ivms101", Value: company.IVMS101},
 		{Name: "primaryContactID", Value: company.PrimaryContact},
-		{Name: "verifiedOn", Value: company.VerifiedOn},
 		{Name: "modified", Value: company.Modified},
 	}
 
-	if _, err = tx.Exec(updateCompanySQL, params...); err != nil {
+	var result sql.Result
+	if result, err = tx.Exec(updateCompanySQL, params...); err != nil {
 		return err
+	}
+
+	if rowsAffected, err := result.RowsAffected(); err != nil || rowsAffected == 0 {
+		if err != nil {
+			return err
+		}
+		return errors.ErrNotFound
+	}
+
+	return nil
+}
+
+const verifyCompanySQL = `UPDATE companies SET verified_on=:verifiedOn WHERE id=:id;`
+
+func (tx *Tx) VerifyCompany(company *Company) (err error) {
+	company.VerifiedOn = fields.TimeNow()
+
+	params := []sql.NamedArg{
+		{Name: "id", Value: company.ID},
+		{Name: "verifiedOn", Value: company.VerifiedOn},
+	}
+
+	var result sql.Result
+	if result, err = tx.Exec(verifyCompanySQL, params...); err != nil {
+		return err
+	}
+
+	if rowsAffected, err := result.RowsAffected(); err != nil || rowsAffected == 0 {
+		if err != nil {
+			return err
+		}
+		return errors.ErrNotFound
 	}
 	return nil
 }
@@ -132,8 +165,16 @@ func (tx *Tx) UpdateCompany(company *Company) (err error) {
 const deleteCompanySQL = `DELETE FROM companies WHERE id=:id;`
 
 func (tx *Tx) DeleteCompany(id uuid.UUID) (err error) {
-	if _, err = tx.Exec(deleteCompanySQL, sql.Named("id", id)); err != nil {
+	var result sql.Result
+	if result, err = tx.Exec(deleteCompanySQL, sql.Named("id", id)); err != nil {
 		return err
+	}
+
+	if rowsAffected, err := result.RowsAffected(); err != nil || rowsAffected == 0 {
+		if err != nil {
+			return err
+		}
+		return errors.ErrNotFound
 	}
 	return nil
 }
@@ -149,7 +190,7 @@ func (db *DB) ListCompanies(ctx context.Context) (_ []*Company, err error) {
 	}
 	defer tx.Rollback()
 
-	var iter *Iterator[*Company]
+	var iter *Iterator[Company, *Company]
 	if iter, err = tx.ListCompanies(); err != nil {
 		return nil, err
 	}
@@ -188,6 +229,19 @@ func (db *DB) UpdateCompany(ctx context.Context, company *Company) (err error) {
 	defer tx.Rollback()
 
 	if err = tx.UpdateCompany(company); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (db *DB) VerifyCompany(ctx context.Context, company *Company) (err error) {
+	var tx *Tx
+	if tx, err = db.Begin(ctx, &sql.TxOptions{ReadOnly: false}); err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err = tx.VerifyCompany(company); err != nil {
 		return err
 	}
 	return tx.Commit()

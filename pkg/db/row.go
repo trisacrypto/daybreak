@@ -17,6 +17,13 @@ func (r *Row) Err() error {
 	return nil
 }
 
+func (r *Row) Scan(dest ...any) error {
+	if err := r.Row.Scan(dest...); err != nil {
+		return dbe(err)
+	}
+	return nil
+}
+
 //============================================================================
 // Scanner Interface
 //============================================================================
@@ -27,7 +34,10 @@ type Scanner interface {
 	Scan(dest ...any) error
 }
 
-type Model interface {
+// Model is a pointer-receiver constraint: M must be *T and implement Scan. This allows
+// the Iterator to allocate a non-nil *T via new(T) before scanning into it.
+type Model[T any] interface {
+	*T
 	Scan(scanner Scanner) error
 }
 
@@ -35,35 +45,35 @@ type Model interface {
 // Iterator
 //============================================================================
 
-type Iterator[M Model] struct {
+type Iterator[T any, M Model[T]] struct {
 	rows *sql.Rows
 }
 
-func Iterate[M Model](rows *sql.Rows) *Iterator[M] {
-	return &Iterator[M]{rows: rows}
+func Iterate[T any, M Model[T]](rows *sql.Rows) *Iterator[T, M] {
+	return &Iterator[T, M]{rows: rows}
 }
 
-func (i *Iterator[M]) Next() bool {
+func (i *Iterator[T, M]) Next() bool {
 	return i.rows.Next()
 }
 
-func (i *Iterator[M]) Err() error {
+func (i *Iterator[T, M]) Err() error {
 	return i.rows.Err()
 }
 
-func (i *Iterator[M]) Close() error {
+func (i *Iterator[T, M]) Close() error {
 	return i.rows.Close()
 }
 
-func (i *Iterator[M]) Model() (M, error) {
-	var model M
-	if err := i.rows.Scan(&model); err != nil {
+func (i *Iterator[T, M]) Model() (M, error) {
+	model := M(new(T))
+	if err := model.Scan(i.rows); err != nil {
 		return model, err
 	}
 	return model, nil
 }
 
-func (i *Iterator[M]) List() (models []M, err error) {
+func (i *Iterator[T, M]) List() (models []M, err error) {
 	models = make([]M, 0)
 	defer i.Close()
 

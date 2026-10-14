@@ -74,6 +74,10 @@ func (c *Company) Validate(method string) (err error) {
 		err = validation.Error(err, validation.ReadOnly("modified"))
 	}
 
+	if !c.VerifiedOn.IsZero() {
+		err = validation.Error(err, validation.ReadOnly("verified_on"))
+	}
+
 	c.LEI = strings.TrimSpace(c.LEI)
 	if c.LEI != "" {
 		if _, perr := lei.Parse(c.LEI); perr != nil {
@@ -125,4 +129,18 @@ func (c *Company) Validate(method string) (err error) {
 		}
 	}
 	return err
+}
+
+// Clone returns a deep copy of the company with read-only fields cleared.
+func (c *Company) Clone() *Company {
+	return &Company{
+		LEI:              c.LEI,
+		Domain:           c.Domain,
+		Name:             c.Name,
+		Website:          c.Website,
+		Country:          c.Country,
+		BusinessCategory: c.BusinessCategory,
+		VASPCategories:   c.VASPCategories,
+		IVMS101:          c.IVMS101,
+	}
 }

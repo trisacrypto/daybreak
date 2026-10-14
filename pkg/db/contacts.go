@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/trisacrypto/daybreak/pkg/db/fields"
+	"github.com/trisacrypto/daybreak/pkg/errors"
 )
 
 type Contact struct {
@@ -38,22 +39,22 @@ func (c *Contact) Scan(scanner Scanner) error {
 
 const listContactsSQL = `SELECT * FROM contacts;`
 
-func (tx *Tx) ListContacts() (contacts *Iterator[*Contact], err error) {
+func (tx *Tx) ListContacts() (contacts *Iterator[Contact, *Contact], err error) {
 	var rows *sql.Rows
 	if rows, err = tx.Query(listContactsSQL); err != nil {
 		return nil, err
 	}
-	return Iterate[*Contact](rows), nil
+	return Iterate[Contact](rows), nil
 }
 
 const listCompanyContactsSQL = `SELECT * FROM contacts WHERE company_id=:companyID;`
 
-func (tx *Tx) ListCompanyContacts(companyID uuid.UUID) (contacts *Iterator[*Contact], err error) {
+func (tx *Tx) ListCompanyContacts(companyID uuid.UUID) (contacts *Iterator[Contact, *Contact], err error) {
 	var rows *sql.Rows
 	if rows, err = tx.Query(listCompanyContactsSQL, sql.Named("companyID", companyID)); err != nil {
 		return nil, err
 	}
-	return Iterate[*Contact](rows), nil
+	return Iterate[Contact](rows), nil
 }
 
 const createContactSQL = `INSERT INTO contacts
@@ -109,8 +110,16 @@ func (tx *Tx) UpdateContact(contact *Contact) (err error) {
 		{Name: "modified", Value: contact.Modified},
 	}
 
-	if _, err = tx.Exec(updateContactSQL, params...); err != nil {
+	var result sql.Result
+	if result, err = tx.Exec(updateContactSQL, params...); err != nil {
 		return err
+	}
+
+	if rowsAffected, err := result.RowsAffected(); err != nil || rowsAffected == 0 {
+		if err != nil {
+			return err
+		}
+		return errors.ErrNotFound
 	}
 	return nil
 }
@@ -118,8 +127,16 @@ func (tx *Tx) UpdateContact(contact *Contact) (err error) {
 const deleteContactSQL = `DELETE FROM contacts WHERE id=:id;`
 
 func (tx *Tx) DeleteContact(id uuid.UUID) (err error) {
-	if _, err = tx.Exec(deleteContactSQL, sql.Named("id", id)); err != nil {
+	var result sql.Result
+	if result, err = tx.Exec(deleteContactSQL, sql.Named("id", id)); err != nil {
 		return err
+	}
+
+	if rowsAffected, err := result.RowsAffected(); err != nil || rowsAffected == 0 {
+		if err != nil {
+			return err
+		}
+		return errors.ErrNotFound
 	}
 	return nil
 }
@@ -135,7 +152,7 @@ func (db *DB) ListContacts(ctx context.Context) (_ []*Contact, err error) {
 	}
 	defer tx.Rollback()
 
-	var iter *Iterator[*Contact]
+	var iter *Iterator[Contact, *Contact]
 	if iter, err = tx.ListContacts(); err != nil {
 		return nil, err
 	}
@@ -149,7 +166,7 @@ func (db *DB) ListCompanyContacts(ctx context.Context, companyID uuid.UUID) (_ [
 	}
 	defer tx.Rollback()
 
-	var iter *Iterator[*Contact]
+	var iter *Iterator[Contact, *Contact]
 	if iter, err = tx.ListCompanyContacts(companyID); err != nil {
 		return nil, err
 	}

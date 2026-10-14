@@ -119,6 +119,9 @@ func (c *APIv1) RetrieveCompany(ctx context.Context, id uuid.UUID) (out *Company
 
 func (c *APIv1) UpdateCompany(ctx context.Context, in *Company) (out *Company, err error) {
 	ep := fmt.Sprintf("%s/%s", companiesEP, in.ID)
+
+	// Ensure read-only fields are cleared
+	in = in.Clone()
 	if err = c.Update(ctx, ep, in, &out); err != nil {
 		return nil, err
 	}

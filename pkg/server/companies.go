@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -124,7 +125,15 @@ func (s *Server) UpdateCompany(ctx context.Context, c *gin.Context) *errors.HTTP
 
 	company = in.Model()
 	company.ID = companyID
-	if err = s.db.UpdateCompany(ctx, company); err != nil {
+
+	// Start a transaction to update the company
+	var tx *db.Tx
+	if tx, err = s.db.Begin(ctx, &sql.TxOptions{ReadOnly: false}); err != nil {
+		return api.Error(http.StatusInternalServerError, err, "failed to start transaction")
+	}
+	defer tx.Rollback()
+
+	if err = tx.UpdateCompany(company); err != nil {
 		if errors.Is(err, errors.ErrNotFound) {
 			return api.Error(http.StatusNotFound, err, "company not found")
 		}
@@ -134,6 +143,15 @@ func (s *Server) UpdateCompany(ctx context.Context, c *gin.Context) *errors.HTTP
 		}
 
 		return api.Error(http.StatusInternalServerError, err, "failed to update company")
+	}
+
+	// Retrieve the updated company
+	if company, err = tx.RetrieveCompany(company.ID); err != nil {
+		return api.Error(http.StatusInternalServerError, err, "failed to retrieve company after update")
+	}
+
+	if err = tx.Commit(); err != nil {
+		return api.Error(http.StatusInternalServerError, err, "failed to commit transaction")
 	}
 
 	if htmx.TriggerUpdated(c, "company") {

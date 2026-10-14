@@ -76,6 +76,8 @@ func TestClient_Status(t *testing.T) {
 // companyFixtures returns a fresh copy of the companies used across the client
 // tests so that individual tests can safely modify them.
 func companyFixtures() []*api.Company {
+	//cSpell: ignore Globex Initech
+	//cSpell: disable
 	return []*api.Company{
 		{
 			ID:               uuid.MustParse("21c407b4-0f7b-4536-b3b3-2d40ed17b16d"),
@@ -133,17 +135,7 @@ func companyFixtures() []*api.Company {
 			Modified:   time.Date(2026, 7, 30, 4, 19, 48, 0, time.UTC),
 		},
 	}
-}
-
-// companyRequest returns a copy of the fixture with the read-only fields zeroed,
-// as a client would send it in a create or update request.
-func companyRequest(fixture *api.Company) *api.Company {
-	in := *fixture
-	in.ID = uuid.Nil
-	in.VerifiedOn = time.Time{}
-	in.Created = time.Time{}
-	in.Modified = time.Time{}
-	return &in
+	//cSpell: enable
 }
 
 func TestClient_ListCompanies(t *testing.T) {
@@ -200,7 +192,7 @@ func TestClient_CreateCompany(t *testing.T) {
 			return nil
 		})
 
-		in := companyRequest(fixture)
+		in := fixture.Clone()
 		reply, err := client.CreateCompany(context.Background(), in)
 		require.NoError(t, err)
 		require.Equal(t, in, received, "request body should match the input")
@@ -213,7 +205,7 @@ func TestClient_CreateCompany(t *testing.T) {
 			return nil
 		})
 
-		in := companyRequest(fixture)
+		in := fixture.Clone()
 		in.Domain = ""
 		reply, err := client.CreateCompany(context.Background(), in)
 		require.Nil(t, reply)
@@ -229,7 +221,7 @@ func TestClient_CreateCompany(t *testing.T) {
 			return nil
 		})
 
-		reply, err := client.CreateCompany(context.Background(), companyRequest(fixture))
+		reply, err := client.CreateCompany(context.Background(), fixture.Clone())
 		require.Nil(t, reply)
 		require.Error(t, err)
 		require.IsType(t, &api.StatusError{}, err)
@@ -293,19 +285,42 @@ func TestClient_UpdateCompany(t *testing.T) {
 			if err := json.NewDecoder(r.Body).Decode(received); err != nil {
 				return api.Error(http.StatusBadRequest, err, "")
 			}
-			WriteJSON(w, http.StatusOK, fixture)
+
+			// Validate the request body
+			if err := received.Validate(http.MethodPut); err != nil {
+				return api.Error(http.StatusBadRequest, err, "")
+			}
+
+			received.ID = fixture.ID
+			received.VerifiedOn = fixture.VerifiedOn
+			received.Created = fixture.Created
+			received.Modified = fixture.Modified
+
+			WriteJSON(w, http.StatusOK, received)
 			return nil
 		})
 
-		// The ID is required on the input so the client can resolve the endpoint.
-		in := companyRequest(fixture)
-		in.ID = fixture.ID
+		// The ID is required on the input so the client can resolve the endpoint, but
+		// the client strips it (and the other read-only fields) from the request body.
+		in := *fixture
 		in.Website = "https://www.initech.org"
 
-		reply, err := client.UpdateCompany(context.Background(), in)
+		reply, err := client.UpdateCompany(context.Background(), &in)
 		require.NoError(t, err)
-		require.Equal(t, in, received, "request body should match the input")
-		require.Equal(t, fixture, reply)
+
+		// The reply should show the updated values
+		require.NotEqual(t, fixture, reply, "reply should show the updated values")
+		require.Equal(t, fixture.ID, reply.ID, "id should be the same")
+		require.Equal(t, fixture.LEI, reply.LEI, "lei should be the same")
+		require.Equal(t, fixture.Domain, reply.Domain, "domain should be the same")
+		require.Equal(t, fixture.Name, reply.Name, "name should be the same")
+		require.Equal(t, fixture.BusinessCategory, reply.BusinessCategory, "business category should be the same")
+		require.Equal(t, fixture.VASPCategories, reply.VASPCategories, "vasp categories should be the same")
+		require.Equal(t, fixture.IVMS101, reply.IVMS101, "ivms101 should be the same")
+		require.Equal(t, fixture.VerifiedOn, reply.VerifiedOn, "verified on should be the same")
+		require.Equal(t, fixture.Created, reply.Created, "created should be the same")
+
+		require.Equal(t, in.Website, reply.Website, "website should be the updated value")
 	})
 
 	t.Run("ValidationError", func(t *testing.T) {
@@ -319,7 +334,7 @@ func TestClient_UpdateCompany(t *testing.T) {
 			return nil
 		})
 
-		in := companyRequest(fixture)
+		in := fixture.Clone()
 		in.ID = fixture.ID
 		in.Name = ""
 		in.Country = "USA"
@@ -339,7 +354,7 @@ func TestClient_UpdateCompany(t *testing.T) {
 			return nil
 		})
 
-		in := companyRequest(fixture)
+		in := fixture.Clone()
 		in.ID = fixture.ID
 
 		reply, err := client.UpdateCompany(context.Background(), in)
@@ -356,7 +371,7 @@ func TestClient_UpdateCompany(t *testing.T) {
 			return nil
 		})
 
-		in := companyRequest(fixture)
+		in := fixture.Clone()
 		in.ID = fixture.ID
 
 		reply, err := client.UpdateCompany(context.Background(), in)
@@ -416,6 +431,8 @@ func TestClient_DeleteCompany(t *testing.T) {
 // contactFixtures returns a fresh copy of the contacts used across the client
 // tests so that individual tests can safely modify them.
 func contactFixtures() []*api.Contact {
+	//cSpell: ignore Priya Vogel
+	//cSpell: disable
 	return []*api.Contact{
 		{
 			ID:        uuid.MustParse("135a608a-5c3b-4339-b40b-0a98e574a883"),
@@ -468,6 +485,7 @@ func contactFixtures() []*api.Contact {
 			Modified:  time.Date(2026, 4, 11, 10, 54, 39, 0, time.UTC),
 		},
 	}
+	//cSpell: enable
 }
 
 func contactRequest(fixture *api.Contact) *api.Contact {

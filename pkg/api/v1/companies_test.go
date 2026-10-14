@@ -42,7 +42,6 @@ func TestCompanyValidate(t *testing.T) {
 			{"NoLEI", func(c *api.Company) { c.LEI = "" }},
 			{"NilVASPCategories", func(c *api.Company) { c.VASPCategories = nil }},
 			{"EmptyVASPCategories", func(c *api.Company) { c.VASPCategories = []string{} }},
-			{"VerifiedOnIsWritable", func(c *api.Company) { c.VerifiedOn = time.Now() }},
 		}
 
 		for _, tc := range tests {
@@ -127,6 +126,11 @@ func TestCompanyValidate(t *testing.T) {
 				"ReadOnlyModified",
 				func(c *api.Company) { c.Modified = time.Now() },
 				[]*validation.FieldError{validation.ReadOnly("modified")},
+			},
+			{
+				"ReadOnlyVerifiedOn",
+				func(c *api.Company) { c.VerifiedOn = time.Now() },
+				[]*validation.FieldError{validation.ReadOnly("verified_on")},
 			},
 			// LEI is optional but must be valid when present
 			{
@@ -294,6 +298,7 @@ func TestCompanyValidate(t *testing.T) {
 			BusinessCategory: "foo",
 			VASPCategories:   []string{"bar"},
 			IVMS101:          json.RawMessage(`{"countryOfRegistration": "GB"}`),
+			VerifiedOn:       time.Now(),
 			Created:          time.Now(),
 			Modified:         time.Now(),
 		}
@@ -305,6 +310,7 @@ func TestCompanyValidate(t *testing.T) {
 			validation.ReadOnly("id"),
 			validation.ReadOnly("created"),
 			validation.ReadOnly("modified"),
+			validation.ReadOnly("verified_on"),
 			validation.Invalid("lei", "invalid length: 3, expected 20"),
 			validation.Required("domain"),
 			validation.Required("name"),
