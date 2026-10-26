@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strings"
@@ -62,6 +64,12 @@ func main() {
 				Action:    load,
 				ArgsUsage: "daybreak.json",
 				Category:  "service",
+			},
+			{
+				Name:     "session-key",
+				Usage:    "generate a new session key",
+				Action:   sessionKey,
+				Category: "service",
 			},
 		},
 	}
@@ -169,5 +177,15 @@ func load(ctx context.Context, cmd *cli.Command) (err error) {
 	if err = tx.Commit(); err != nil {
 		return cli.Exit(err, 1)
 	}
+	return nil
+}
+
+// sessionKey generates a new session key.
+func sessionKey(ctx context.Context, cmd *cli.Command) (err error) {
+	out := make([]byte, 32)
+	if _, err = rand.Read(out); err != nil {
+		return cli.Exit(err, 1)
+	}
+	fmt.Println(base64.StdEncoding.EncodeToString(out))
 	return nil
 }

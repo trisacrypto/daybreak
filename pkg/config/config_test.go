@@ -18,21 +18,25 @@ import (
 // added to this package, it should be added to this map and have a non-default value
 // for testing and validation purposes.
 var testEnv = contest.Env{
-	"DAYBREAK_MAINTENANCE":         "true",
-	"DAYBREAK_MODE":                "debug",
-	"DAYBREAK_LOG_LEVEL":           "debug",
-	"DAYBREAK_CONSOLE_LOG":         "true",
-	"DAYBREAK_BIND_ADDR":           ":8888",
-	"DAYBREAK_ORIGIN":              "http://localhost:8888",
-	"DAYBREAK_ALLOW_ORIGINS":       "http://localhost:8888",
-	"DAYBREAK_DATABASE_URL":        "sqlite3:///daybreak.db",
-	"DAYBREAK_READ_HEADER_TIMEOUT": "8s",
-	"DAYBREAK_WRITE_TIMEOUT":       "16s",
-	"DAYBREAK_IDLE_TIMEOUT":        "32s",
-	"DAYBREAK_SHUTDOWN_TIMEOUT":    "64s",
-	"DAYBREAK_STATIC_SERVE":        "false",
-	"DAYBREAK_STATIC_ROOT":         "../web/static",
-	"DAYBREAK_STATIC_URL":          "https://example.com/static",
+	"DAYBREAK_MAINTENANCE":          "true",
+	"DAYBREAK_MODE":                 "debug",
+	"DAYBREAK_LOG_LEVEL":            "debug",
+	"DAYBREAK_CONSOLE_LOG":          "true",
+	"DAYBREAK_BIND_ADDR":            ":8888",
+	"DAYBREAK_ORIGIN":               "http://localhost:8888",
+	"DAYBREAK_ALLOW_ORIGINS":        "http://localhost:8888",
+	"DAYBREAK_DATABASE_URL":         "sqlite3:///daybreak.db",
+	"DAYBREAK_READ_HEADER_TIMEOUT":  "8s",
+	"DAYBREAK_WRITE_TIMEOUT":        "16s",
+	"DAYBREAK_IDLE_TIMEOUT":         "32s",
+	"DAYBREAK_SHUTDOWN_TIMEOUT":     "64s",
+	"DAYBREAK_STATIC_SERVE":         "false",
+	"DAYBREAK_STATIC_ROOT":          "../web/static",
+	"DAYBREAK_STATIC_URL":           "https://example.com/static",
+	"GOOGLE_CLIENT_ID":              "google-client-id",
+	"GOOGLE_CLIENT_SECRET":          "google-client-secret",
+	"DAYBREAK_AUTH_ALLOWED_DOMAINS": "travelrule.io,rotational.io",
+	"DAYBREAK_AUTH_SESSION_KEY":     "ZYAPVCp/BMoFvrJL+fEmDpmWevm318AHuP1bXC3Ml34=",
 }
 
 // This config should always pass validation and should match the testEnv.
@@ -49,6 +53,12 @@ var validConfig = config.Config{
 	WriteTimeout:      16 * time.Second,
 	IdleTimeout:       32 * time.Second,
 	ShutdownTimeout:   64 * time.Second,
+	Auth: config.AuthConfig{
+		ClientID:       "google-client-id",
+		ClientSecret:   "google-client-secret",
+		AllowedDomains: []string{"travelrule.io", "rotational.io"},
+		SessionKey:     "ZYAPVCp/BMoFvrJL+fEmDpmWevm318AHuP1bXC3Ml34=",
+	},
 	Static: config.StaticConfig{
 		Serve: false,
 		Root:  "../web/static",
@@ -73,6 +83,9 @@ func TestDefaultConfig(t *testing.T) {
 
 	// Required environment variables should be set
 	os.Setenv("DAYBREAK_STATIC_ROOT", filepath.Join(os.Getenv("GOPATH"), "src", "github.com", "trisacrypto", "daybreak", "pkg", "web", "static"))
+	os.Setenv("GOOGLE_CLIENT_ID", "google-client-id")
+	os.Setenv("GOOGLE_CLIENT_SECRET", "google-client-secret")
+	os.Setenv("DAYBREAK_AUTH_ALLOWED_DOMAINS", "travelrule.io,rotational.io")
 
 	// Ensure the default config is valid
 	conf, err := config.New()
