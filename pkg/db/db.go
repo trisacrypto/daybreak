@@ -78,6 +78,12 @@ func Open(uri *dsn.DSN) (_ *DB, err error) {
 		}
 	}
 
+	// Start the janitor routine.
+	db.janitor = &Janitor{db: db}
+	if err = db.janitor.Run(); err != nil {
+		return nil, err
+	}
+
 	return db, nil
 }
 
@@ -87,6 +93,7 @@ type DB struct {
 	*sql.DB
 	uri      *dsn.DSN
 	readonly bool
+	janitor  *Janitor
 }
 
 func (db *DB) Begin(ctx context.Context, opts *sql.TxOptions) (_ *Tx, err error) {
@@ -147,6 +154,11 @@ func (db *DB) QueryRow(query string, args ...sql.NamedArg) *Row {
 func (db *DB) QueryRowContext(ctx context.Context, query string, nargs ...sql.NamedArg) *Row {
 	row := db.DB.QueryRowContext(ctx, query, args(nargs)...)
 	return &Row{Row: row}
+}
+
+func (db *DB) Close() error {
+	db.janitor.Stop()
+	return db.DB.Close()
 }
 
 // ===========================================================================

@@ -108,6 +108,7 @@ func Migrations() (data []*Migration, err error) {
 			Path: entry.Name(),
 		})
 	}
+
 	return data, nil
 }
 

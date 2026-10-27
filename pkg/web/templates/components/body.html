@@ -1,6 +1,6 @@
 {{ define "body" }}
 
-<body class="{{- block " bodyclass" . -}}{{ end }}">
+<body class='{{ block "bodyclass" . }}{{ end }}'>
   {{ block "content" . -}}{{- end }}
 
   {{ block "scripts" . -}}

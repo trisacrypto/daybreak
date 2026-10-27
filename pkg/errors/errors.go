@@ -22,6 +22,11 @@ var (
 	ErrAlreadyExists       = errors.New("record already exists in database")
 	ErrForeignKeyViolation = errors.New("foreign key violation")
 
+	// Authentication errors
+	ErrInvalidOAuthState = errors.New("oauth state mismatch: possible CSRF attack")
+	ErrInvalidUserInfo   = errors.New("user info returned from OAuth provider is invalid")
+	ErrDomainNotAllowed  = errors.New("email domain not allowed")
+
 	// Development errors
 	ErrUnknown        = errors.New("an unknown error occurred")
 	ErrNotImplemented = errors.New("this operation is not implemented")

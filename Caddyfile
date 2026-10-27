@@ -1,0 +1,4 @@
+# Local development
+localhost {
+    reverse_proxy localhost:8000
+}

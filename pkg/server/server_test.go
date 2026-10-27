@@ -52,6 +52,9 @@ func (s *Suite) SetupSuite() {
 			Root:  "pkg/web/static",
 			URL:   "/static",
 		},
+		Auth: config.AuthConfig{
+			SessionKey: "ZYAPVCp/BMoFvrJL+fEmDpmWevm318AHuP1bXC3Ml34=",
+		},
 	}
 
 	err := config.Set(s.conf)

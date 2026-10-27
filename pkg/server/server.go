@@ -22,6 +22,7 @@ import (
 	"go.rtnl.ai/x/probez"
 	"go.rtnl.ai/x/rlog"
 	"go.rtnl.ai/x/rlog/console"
+	"golang.org/x/oauth2"
 )
 
 type Server struct {
@@ -31,6 +32,7 @@ type Server struct {
 	url     *url.URL
 	srv     *http.Server
 	conf    config.Config
+	auth    *oauth2.Config
 	errc    chan error
 	router  *gin.Engine
 	started time.Time
@@ -70,9 +72,13 @@ func New() (s *Server, err error) {
 
 	// Handle non-maintenance mode operations
 	if !s.conf.Maintenance {
+		// Open the database connection
 		if s.db, err = db.Open(s.conf.DatabaseDSN()); err != nil {
 			return nil, err
 		}
+
+		// Create the OAuth2 configuration
+		s.auth = s.conf.OAuth2()
 	}
 
 	// Create a new router
@@ -84,6 +90,10 @@ func New() (s *Server, err error) {
 	s.router.ForwardedByClientIP = true
 	s.router.UseRawPath = false
 	s.router.UnescapePathValues = true
+
+	// Trust local proxies (for development)
+	// TODO: only do this if the origin is localhost
+	s.router.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
 	if err = s.setupRoutes(); err != nil {
 		return nil, err

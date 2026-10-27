@@ -33,6 +33,7 @@ type Config struct {
 	WriteTimeout      time.Duration     `split_words:"true" default:"180s" desc:"the maximum duration for writing the response (see Go's http.Server.WriteTimeout)"`
 	IdleTimeout       time.Duration     `split_words:"true" default:"360s" desc:"the maximum duration for idle connections (see Go's http.Server.IdleTimeout)"`
 	ShutdownTimeout   time.Duration     `split_words:"true" default:"180s" desc:"the maximum duration for shutting down the server"`
+	Auth              AuthConfig
 	Static            StaticConfig
 }
 

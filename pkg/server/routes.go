@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/trisacrypto/daybreak/pkg"
 	"github.com/trisacrypto/daybreak/pkg/web"
@@ -17,6 +18,12 @@ func (s *Server) setupRoutes() (err error) {
 	// NOTE: this mut be run before any routes are created to support cached static
 	// HTML templates that are rendered from configuration or in memory data.
 	if s.router.HTMLRender, err = web.NewRender(web.Templates()); err != nil {
+		return err
+	}
+
+	// Setup the session store middleware for authentication.
+	var store sessions.Store
+	if store, err = s.db.Sessions(s.conf.Auth.SessionKeyPairs()...); err != nil {
 		return err
 	}
 
@@ -34,6 +41,9 @@ func (s *Server) setupRoutes() (err error) {
 
 		// CORS configuration allows the front-end to make cross-origin requests
 		cors.New(s.conf.CORS()),
+
+		// Session store middleware
+		sessions.Sessions("daybreak", store),
 	}
 
 	// Kubernetes liveness probes added before middleware.
@@ -62,10 +72,19 @@ func (s *Server) setupRoutes() (err error) {
 		s.router.StaticFS(s.conf.Static.URL, http.FS(os.DirFS(s.conf.Static.Root)))
 	}
 
-	// Web UI routes (authenticated)
-	ui := s.router.Group("")
+	// Authentication routes
+	s.router.GET("/login", Wrap("ui.login", s.LoginPage))
+	auth := s.router.Group("/auth")
 	{
-		ui.GET("/", Wrap("ui.dashboard", s.Dashboard))
+		auth.GET("/login", Wrap("ui.auth.login", s.AuthLogin))
+		auth.GET("/logout", Wrap("ui.auth.logout", s.AuthLogout))
+		auth.GET("/callback", Wrap("ui.auth.callback", s.AuthCallback))
+	}
+
+	// Web UI routes (authenticated)
+	uia := s.router.Group("", LoginRequired)
+	{
+		uia.GET("/", Wrap("ui.dashboard", s.Dashboard))
 	}
 
 	// API routes (unauthenticated)
