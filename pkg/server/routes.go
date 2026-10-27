@@ -73,6 +73,7 @@ func (s *Server) setupRoutes() (err error) {
 	}
 
 	// Authentication routes
+	s.router.GET("/login", Wrap("ui.login", s.LoginPage))
 	auth := s.router.Group("/auth")
 	{
 		auth.GET("/login", Wrap("ui.auth.login", s.AuthLogin))
@@ -81,9 +82,9 @@ func (s *Server) setupRoutes() (err error) {
 	}
 
 	// Web UI routes (authenticated)
-	ui := s.router.Group("")
+	uia := s.router.Group("", LoginRequired)
 	{
-		ui.GET("/", Wrap("ui.dashboard", s.Dashboard))
+		uia.GET("/", Wrap("ui.dashboard", s.Dashboard))
 	}
 
 	// API routes (unauthenticated)

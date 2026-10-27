@@ -3,6 +3,7 @@ package scene
 import (
 	"maps"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/trisacrypto/daybreak/pkg"
 )
@@ -53,6 +54,10 @@ func New(c *gin.Context) Scene {
 
 	// Set path from the gin context
 	context[Path] = c.Request.URL.Path
+
+	// Add the user info to the context
+	session := sessions.Default(c)
+	context[User] = session.Get("user")
 
 	return context
 }

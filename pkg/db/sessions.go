@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/base32"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -41,6 +42,7 @@ const (
 	updateSessionSQL   = `UPDATE http_sessions SET data = $2, modified = $3, expires = $4 WHERE id = $1`
 	deleteSessionSQL   = `DELETE FROM http_sessions WHERE id = $1`
 	retrieveSessionSQL = `SELECT id, data, created, modified, expires FROM http_sessions WHERE id = $1`
+	allSessionsSQL     = `SELECT id, expires FROM http_sessions`
 )
 
 // Keys are defined in pairs to allow key rotation, but the common case is to set a single
@@ -65,6 +67,9 @@ func (db *DB) Sessions(keyPairs ...[]byte) (_ sessions.Store, err error) {
 		},
 	}
 
+	// Ensure the codecs are updated with the max age.
+	store.MaxAge(store.options.MaxAge)
+
 	if store.insert, err = db.Prepare(insertSessionSQL); err != nil {
 		return nil, err
 	}
@@ -87,6 +92,7 @@ func (db *DB) Sessions(keyPairs ...[]byte) (_ sessions.Store, err error) {
 // Get should return a cached session.
 // Implements the gorilla Store interface for session management.
 func (db *SessionStore) Get(r *http.Request, name string) (*gsessions.Session, error) {
+	fmt.Printf("Getting session: %s\n", name)
 	return gsessions.GetRegistry(r).Get(db, name)
 }
 
@@ -103,14 +109,15 @@ func (db *SessionStore) New(r *http.Request, name string) (session *gsessions.Se
 	if c, errCookie := r.Cookie(name); errCookie == nil {
 		if err = securecookie.DecodeMulti(name, c.Value, &session.ID, db.codecs...); err == nil {
 			if err = db.load(session); err == nil {
+				fmt.Printf("DB record found for session, do not create a new session\n")
 				session.IsNew = false
 			} else if errors.Is(err, sql.ErrNoRows) {
+				fmt.Printf("No rows found for session\n")
 				err = nil
 			}
 		}
 	}
 
-	db.MaxAge(db.options.MaxAge)
 	return session, err
 }
 
@@ -182,12 +189,17 @@ func (db *SessionStore) load(s *gsessions.Session) (err error) {
 		return err
 	}
 
+	s.Values = make(map[any]any)
 	return securecookie.DecodeMulti(s.Name(), row.Data, &s.Values, db.codecs...)
 }
 
 func (db *SessionStore) save(s *gsessions.Session) (err error) {
 	// Create the record to insert or update.
 	row := &Session{ID: s.ID, Modified: fields.TimeNow()}
+
+	if row.Data, err = securecookie.EncodeMulti(s.Name(), s.Values, db.codecs...); err != nil {
+		return err
+	}
 
 	if created, ok := s.Values["created_on"].(time.Time); ok {
 		row.Created = fields.Time(created)

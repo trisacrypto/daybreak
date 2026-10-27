@@ -49,7 +49,10 @@ func (c *AuthConfig) SessionKeyPairs() (out [][]byte) {
 	out = make([][]byte, 0, 1)
 
 	if c.SessionKey != "" {
-		key, _ := base64.StdEncoding.DecodeString(c.SessionKey)
+		key, err := base64.StdEncoding.DecodeString(c.SessionKey)
+		if err != nil {
+			panic(err)
+		}
 		out = append(out, key)
 	} else {
 		key := make([]byte, 32)
@@ -58,4 +61,13 @@ func (c *AuthConfig) SessionKeyPairs() (out [][]byte) {
 	}
 
 	return out
+}
+
+func (c *AuthConfig) DomainAllowed(hd string) bool {
+	for _, domain := range c.AllowedDomains {
+		if hd == domain {
+			return true
+		}
+	}
+	return false
 }
