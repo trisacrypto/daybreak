@@ -94,7 +94,7 @@ func (s *Server) setupRoutes() (err error) {
 	}
 
 	// Authenticated API Routes
-	v1a := s.router.Group("/v1")
+	v1a := s.router.Group("/v1", LoginRequired)
 	{
 		// Companies Resource
 		v1a.GET("/companies", Wrap("api.companies.list", s.ListCompanies))

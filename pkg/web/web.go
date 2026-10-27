@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin/render"
 	"github.com/trisacrypto/daybreak/pkg/config"
+	countries "go.rtnl.ai/x/country"
 	"go.rtnl.ai/x/humanize"
 	"go.rtnl.ai/x/rlog"
 	"go.rtnl.ai/x/typecase"
@@ -69,10 +70,12 @@ func NewRender(fsys fs.FS) (render *Render, err error) {
 			"%s/components/*/*.html",
 			"%s/*/components/*.html",
 			"%s/*/components/*/*.html",
+
 			// Forms
 			"%s/forms/*.html",
 			"%s/*/forms/*.html",
 			"%s/*/forms/*/*.html",
+
 			// Partials
 			"%s/*/partials/*.html",
 			"%s/*/partials/*/*.html",
@@ -93,7 +96,7 @@ func NewRender(fsys fs.FS) (render *Render, err error) {
 		}
 
 		// Ensure current layout is last in the template list.
-		patternInclude = append(patternInclude, fmt.Sprintf("%s/*.html", name))
+		appendGlob(fmt.Sprintf("%s/*.html", name))
 
 		// Add templates to the renderer.
 		for _, pattern := range patterns {
@@ -178,10 +181,16 @@ func (r *Render) FuncMap() template.FuncMap {
 // ===========================================================================
 
 func country(s string) string {
-	return ""
+	if c, _ := countries.Alpha2(s); c != nil {
+		return c.ShortName
+	}
+	return s
 }
 
 func flag(s string) string {
+	if c, _ := countries.Alpha2(s); c != nil {
+		return c.Flag()
+	}
 	return ""
 }
 
