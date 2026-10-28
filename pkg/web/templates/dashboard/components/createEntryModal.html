@@ -6,9 +6,136 @@
         <h4 class="modal-title">Create Daybreak Entry</h4>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body"></div>
+      <div class="modal-body">
+        <form id="createEntryForm" hx-post="/v1/companies" hx-ext="form-json" hx-swap="none"
+          hx-disabled-elt="#createBtn">
+          <div id="createEntryAlerts"></div>
+
+          <h3 class="mb-3">Company</h3>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="companyName">Name</label>
+                <small class="form-text text-body-secondary">Full legal entity name</small>
+                <input type="text" class="form-control" id="companyName" name="name" placeholder="Acme Company, LTD"
+                  required>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="companyDomain">Domain</label>
+                <small class="form-text text-body-secondary">Unique domain for indexing</small>
+                <input type="text" class="form-control" id="companyDomain" name="domain" placeholder="acme.com" required>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="companyWebsite">Website</label>
+                <small class="form-text text-body-secondary">Company or exchange website</small>
+                <input type="url" class="form-control" id="companyWebsite" name="website"
+                  placeholder="https://acme.com" required>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="companyCountry">Country</label>
+                <small class="form-text text-body-secondary">Country of incorporation</small>
+                <select class="form-select" id="companyCountry" name="country" required>
+                  <option value="" selected disabled>Select a country</option>
+                  {{- range countries }}
+                  <option value="{{ .Alpha2 }}">{{ .ShortName }}</option>
+                  {{- end }}
+                </select>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="companyLEI">LEI</label>
+                <small class="form-text text-body-secondary">Optional legal entity identifier</small>
+                <input type="text" class="form-control" id="companyLEI" name="lei" placeholder="GSAT00N4Q1AKFAMMDK61"
+                  maxlength="20">
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="companyBusinessCategory">Business Category</label>
+                <small class="form-text text-body-secondary">TRISA business category</small>
+                <select class="form-select" id="companyBusinessCategory" name="business_category" required>
+                  <option value="PRIVATE_ORGANIZATION">Private Organization</option>
+                  <option value="GOVERNMENT_ENTITY">Government Entity</option>
+                  <option selected value="BUSINESS_ENTITY">Business Entity</option>
+                  <option value="NON_COMMERCIAL_ENTITY">Non-Commercial Entity</option>
+                  <option value="UNKNOWN_ENTITY">Unknown</option>
+                </select>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label mb-0" for="companyVASPCategories">VASP Categories</label>
+            <small class="form-text text-body-secondary">Hold Ctrl/Cmd to select multiple.</small>
+            <select class="form-select" id="companyVASPCategories" name="vasp_categories[]" multiple size="5">
+              <option value="Exchange">Exchange</option>
+              <option value="DEX">DEX</option>
+              <option value="P2P">P2P</option>
+              <option value="Kiosk">Kiosk</option>
+              <option value="Custodian">Custodian</option>
+              <option value="OTC">OTC</option>
+              <option value="Fund">Fund</option>
+              <option value="Project">Project</option>
+              <option value="Gambling">Gambling</option>
+              <option value="Miner">Miner</option>
+              <option value="Mixer">Mixer</option>
+              <option value="Individual">Individual</option>
+              <option value="Other">Other</option>
+              <option value="Unknown">Unknown</option>
+            </select>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <hr class="my-4">
+
+          <h3 class="mb-3">Primary Contact</h3>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="contactName">Name</label>
+                <small class="form-text text-body-secondary">Full name of the contact</small>
+                <input type="text" class="form-control" id="contactName" name="contacts[0].name"
+                  placeholder="Jane Doe" required>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="contactEmail">Email</label>
+                <small class="form-text text-body-secondary">Email address without name</small>
+                <input type="email" class="form-control" id="contactEmail" name="contacts[0].email"
+                  placeholder="compliance@acme.com" required>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group mb-0">
+            <label class="form-label mb-0" for="contactRole">Role</label>
+            <small class="form-text text-body-secondary">Optional, e.g. Compliance Officer.</small>
+            <input type="text" class="form-control" id="contactRole" name="contacts[0].role"
+              placeholder="Compliance Officer">
+            <div class="invalid-feedback"></div>
+          </div>
+        </form>
+      </div>
       <div class="modal-footer">
-        <button id="createBtn" type="button" class="btn btn-primary">Create</button>
+        <button id="createBtn" type="submit" form="createEntryForm" class="btn btn-primary">Create</button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>

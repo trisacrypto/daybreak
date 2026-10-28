@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/trisacrypto/daybreak/pkg"
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
 	"github.com/trisacrypto/daybreak/pkg/errors"
@@ -117,7 +118,9 @@ func LoginRequired(c *gin.Context) {
 	user := session.Get(userSessionKey)
 
 	if user == nil {
-		if htmx.IsHTMXRequest(c) {
+		format := c.NegotiateFormat(binding.MIMEHTML, binding.MIMEJSON)
+
+		if format == binding.MIMEHTML || htmx.IsHTMXRequest(c) {
 			c.Redirect(http.StatusTemporaryRedirect, "/login")
 			return
 		}

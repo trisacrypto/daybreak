@@ -159,6 +159,7 @@ func (r *Render) FuncMap() template.FuncMap {
 	if r.funcs == nil {
 		r.funcs = template.FuncMap{
 			"camel":     camel,
+			"countries": countries.Countries,
 			"country":   country,
 			"datetime":  datetime,
 			"flag":      flag,
