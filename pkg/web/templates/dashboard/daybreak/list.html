@@ -21,7 +21,7 @@
 {{- end }}
 
 {{- define "main" }}
-<section id="companies" hx-get="/v1/companies" hx-trigger="load">
+<section id="companies" hx-get="/v1/companies" hx-trigger="load, company-created from:body">
   <div class="card">
     <div class="card-body text-center">
       <div class="spinner-border" role="status">

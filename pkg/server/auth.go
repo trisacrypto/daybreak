@@ -16,6 +16,7 @@ import (
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
 	"github.com/trisacrypto/daybreak/pkg/errors"
 	"github.com/trisacrypto/daybreak/pkg/web/scene"
+	"go.rtnl.ai/gimlet/htmx"
 	"golang.org/x/oauth2"
 )
 
@@ -116,7 +117,12 @@ func LoginRequired(c *gin.Context) {
 	user := session.Get(userSessionKey)
 
 	if user == nil {
-		c.Redirect(http.StatusTemporaryRedirect, "/login")
+		if htmx.IsHTMXRequest(c) {
+			c.Redirect(http.StatusTemporaryRedirect, "/login")
+			return
+		}
+
+		c.AbortWithStatusJSON(http.StatusUnauthorized, api.Unauthorized)
 		return
 	}
 
