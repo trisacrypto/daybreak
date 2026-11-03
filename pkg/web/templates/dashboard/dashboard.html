@@ -37,6 +37,7 @@
           </div>
         </div>
         {{ end }}
+        {{ block "alerts" . }}{{ end }}
         {{ block "main" . }}{{ end }}
       </div>
     </div>

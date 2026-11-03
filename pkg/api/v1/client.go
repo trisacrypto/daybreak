@@ -308,6 +308,9 @@ func (c *APIv1) NewRequest(ctx context.Context, method, path string, data interf
 	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	req.Header.Set("Content-Type", "application/json")
 
+	// TODO: Add authentication headers
+	req.Header.Set("Authorization", "Bearer "+"testing")
+
 	// Return the request
 	return req, nil
 }

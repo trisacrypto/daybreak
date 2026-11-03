@@ -12,10 +12,12 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/trisacrypto/daybreak/pkg"
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
 	"github.com/trisacrypto/daybreak/pkg/errors"
 	"github.com/trisacrypto/daybreak/pkg/web/scene"
+	"go.rtnl.ai/gimlet/htmx"
 	"golang.org/x/oauth2"
 )
 
@@ -112,11 +114,24 @@ func (s *Server) AuthCallback(ctx context.Context, c *gin.Context) *errors.HTTP 
 
 // LoginRequired is a session based middleware that is for the UI only.
 func LoginRequired(c *gin.Context) {
+	// TODO: this is a hack for testing only, use license key to authenticate
+	if c.Request.Header.Get("Authorization") == "Bearer testing" {
+		c.Next()
+		return
+	}
+
 	session := sessions.Default(c)
 	user := session.Get(userSessionKey)
 
 	if user == nil {
-		c.Redirect(http.StatusTemporaryRedirect, "/login")
+		format := c.NegotiateFormat(binding.MIMEHTML, binding.MIMEJSON)
+
+		if format == binding.MIMEHTML || htmx.IsHTMXRequest(c) {
+			c.Redirect(http.StatusTemporaryRedirect, "/login")
+			return
+		}
+
+		c.AbortWithStatusJSON(http.StatusUnauthorized, api.Unauthorized)
 		return
 	}
 

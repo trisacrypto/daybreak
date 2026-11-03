@@ -6,6 +6,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/trisacrypto/daybreak/pkg"
+	"github.com/trisacrypto/daybreak/pkg/api/v1"
 )
 
 var (
@@ -75,4 +76,17 @@ func (s Scene) WithAPIData(data any) Scene {
 func (s Scene) ForPage(page string) Scene {
 	s[Page] = page
 	return s
+}
+
+//============================================================================
+// API Data Helpers
+//============================================================================
+
+func (s Scene) Companies() []*api.Company {
+	if data, ok := s[APIData]; ok {
+		if out, ok := data.([]*api.Company); ok {
+			return out
+		}
+	}
+	return nil
 }

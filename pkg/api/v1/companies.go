@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"net/http"
 	"strings"
 	"time"
 
@@ -28,6 +29,10 @@ type Company struct {
 	VerifiedOn       time.Time       `json:"verified_on"`
 	Created          time.Time       `json:"created"`
 	Modified         time.Time       `json:"modified"`
+
+	// Contacts may be supplied on create to atomically create the company and its
+	// initial contacts; the first contact becomes the company's primary contact.
+	Contacts []*Contact `json:"contacts,omitempty"`
 }
 
 func NewCompany(model *db.Company) *Company {
@@ -125,6 +130,36 @@ func (c *Company) Validate(method string) (err error) {
 		} else {
 			if perr := ivms101.Validate(person); perr != nil {
 				err = validation.Error(err, validation.Invalid("ivms101", perr.Error()))
+			}
+		}
+	}
+
+	// Nested contacts are only accepted on create; updates must use the contacts resource.
+	if method != http.MethodPost && len(c.Contacts) > 0 {
+		err = validation.Error(err, validation.ReadOnly("contacts"))
+	}
+
+	// Validate nested contacts; company_id is assigned by the server on create.
+	for i, contact := range c.Contacts {
+		if contact == nil {
+			continue
+		}
+
+		cerr := contact.Validate(method)
+		if contact.CompanyID != uuid.Nil {
+			cerr = validation.Error(cerr, validation.ReadOnly("company_id"))
+		}
+
+		if cerr != nil {
+			switch child := cerr.(type) {
+			case validation.Errors:
+				for _, ferr := range child {
+					err = validation.Error(err, ferr.SubfieldArray("contacts", i))
+				}
+			case *validation.FieldError:
+				err = validation.Error(err, child.SubfieldArray("contacts", i))
+			default:
+				err = validation.Error(err, validation.Invalid("contacts", child.Error()).Index(i))
 			}
 		}
 	}

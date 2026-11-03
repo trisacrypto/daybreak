@@ -42,6 +42,8 @@ func TestCompanyValidate(t *testing.T) {
 			{"NoLEI", func(c *api.Company) { c.LEI = "" }},
 			{"NilVASPCategories", func(c *api.Company) { c.VASPCategories = nil }},
 			{"EmptyVASPCategories", func(c *api.Company) { c.VASPCategories = []string{} }},
+			{"NilContacts", func(c *api.Company) { c.Contacts = nil }},
+			{"EmptyContacts", func(c *api.Company) { c.Contacts = []*api.Contact{} }},
 		}
 
 		for _, tc := range tests {
@@ -51,6 +53,36 @@ func TestCompanyValidate(t *testing.T) {
 					tc.modify(company)
 					require.NoError(t, company.Validate(method), "expected no error for method %q", method)
 					require.NotNil(t, company.VASPCategories, "expected non-nil vasp categories after validation")
+				}
+			})
+		}
+	})
+
+	t.Run("ValidOnPOST", func(t *testing.T) {
+		tests := []struct {
+			name   string
+			modify func(c *api.Company)
+		}{
+			{"SingleContact", func(c *api.Company) {
+				c.Contacts = []*api.Contact{{Name: "Bob", Email: "bob@example.com", Role: "admin"}}
+			}},
+			{"MultipleContacts", func(c *api.Company) {
+				c.Contacts = []*api.Contact{{Name: "Bob", Email: "bob@example.com", Role: "admin"}, {Name: "Alice", Email: "alice@example.com", Role: "admin"}}
+			}},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				company := mockCompany()
+				tc.modify(company)
+				require.NoError(t, company.Validate("POST"), "expected no error for method POST")
+			})
+
+			t.Run(tc.name, func(t *testing.T) {
+				for _, method := range []string{"PUT", ""} {
+					company := mockCompany()
+					tc.modify(company)
+					require.Error(t, company.Validate(method), "expected error for method %q", method)
 				}
 			})
 		}
@@ -247,6 +279,20 @@ func TestCompanyValidate(t *testing.T) {
 					c.IVMS101 = json.RawMessage(`{"name": {"nameIdentifier": [{"legalPersonName": "Bob VASP", "legalPersonNameIdentifierType": "SHRT"}]}}`)
 				},
 				[]*validation.FieldError{validation.Invalid("ivms101", "ivms101: invalid field name.name: at least one name identifier must have a LEGL name identifier type")},
+			},
+			{
+				"InvalidContact",
+				func(c *api.Company) {
+					c.Contacts = []*api.Contact{{Email: "bob@example.com", Role: "admin"}}
+				},
+				[]*validation.FieldError{validation.Required("contacts[0].name")},
+			},
+			{
+				"NonNilContactCompanyID",
+				func(c *api.Company) {
+					c.Contacts = []*api.Contact{{Name: "Bob", Email: "bob@example.com", Role: "admin"}, {Name: "Alice", Email: "alice@example.com", CompanyID: uuid.New()}}
+				},
+				[]*validation.FieldError{validation.ReadOnly("contacts[1].company_id")},
 			},
 		}
 

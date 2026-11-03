@@ -2,3 +2,38 @@
 {{ define "title" }}Daybreak Dashboard{{ end }}
 {{ define "pretitle" }}Daybreak{{ end }}
 {{ define "pagetitle" }}Sunrise Counterparties{{ end }}
+
+{{- define "header-actions" }}
+{{- if not .IsViewOnly }}
+<button class="btn btn-primary ms-2 lift" data-bs-toggle="modal" data-bs-target="#createEntryModal">
+  Add Daybreak Entry
+</button>
+{{- end }}
+{{- end }}
+
+{{- define "modals" }}
+{{ template "createEntryModal" . }}
+{{ template "deleteEntryModal" . }}
+{{- end }}
+
+{{- define "alerts" }}
+<div class="pageAlerts"></div>
+{{- end }}
+
+{{- define "main" }}
+<section id="companies" hx-get="/v1/companies" hx-trigger="load, company-created from:body">
+  <div class="card">
+    <div class="card-body text-center">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  </div>
+</section>
+{{- end }}
+
+
+{{- define "appcode" }}
+<script type="module" src="/static/js/modules/components.js"></script>
+<script type="module" src="/static/js/companies/index.js"></script>
+{{- end }}
