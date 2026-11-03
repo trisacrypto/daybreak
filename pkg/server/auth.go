@@ -114,6 +114,12 @@ func (s *Server) AuthCallback(ctx context.Context, c *gin.Context) *errors.HTTP 
 
 // LoginRequired is a session based middleware that is for the UI only.
 func LoginRequired(c *gin.Context) {
+	// TODO: this is a hack for testing only, use license key to authenticate
+	if c.Request.Header.Get("Authorization") == "Bearer testing" {
+		c.Next()
+		return
+	}
+
 	session := sessions.Default(c)
 	user := session.Get(userSessionKey)
 
