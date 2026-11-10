@@ -86,7 +86,11 @@
                   <i class="fe fe-edit"></i>
                   Edit
                 </a>
-                <a href="#!" class="dropdown-item">
+                <a href="#!" class="dropdown-item"
+                   data-bs-toggle="modal" data-bs-target="#deleteEntryModal"
+                   data-bs-company-id="{{ .ID }}" data-bs-name="{{ .Name }}"
+                   data-bs-website="{{ .Website }}" data-bs-country="{{ .Country }}"
+                   data-bs-lei="{{ if .LEI }}{{ .LEI }}{{ else }}&mdash;{{ end }}">
                   <i class="fe fe-trash"></i>
                   Delete
                 </a>

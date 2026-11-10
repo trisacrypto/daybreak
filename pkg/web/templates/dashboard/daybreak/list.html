@@ -21,7 +21,7 @@
 {{- end }}
 
 {{- define "main" }}
-<section id="companies" hx-get="/v1/companies" hx-trigger="load, company-created from:body">
+<section id="companies" hx-get="/v1/companies" hx-trigger="load, company-created from:body, company-deleted from:body">
   <div class="card">
     <div class="card-body text-center">
       <div class="spinner-border" role="status">
@@ -35,5 +35,6 @@
 
 {{- define "appcode" }}
 <script type="module" src="/static/js/modules/components.js"></script>
+<script type="module" src="/static/js/htmx/helpers.js"></script>
 <script type="module" src="/static/js/companies/index.js"></script>
 {{- end }}
