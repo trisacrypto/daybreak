@@ -47,6 +47,57 @@ func (s *Suite) TestCompanyResource() {
 			require.Zero(created.VerifiedOn, "verified on should be zero")
 		})
 
+		s.Run("WithContact", func() {
+			require := s.Require()
+			company := &api.Company{
+				Domain:           "nordlys.no",
+				Name:             "Nordlys Digital AS",
+				Website:          "https://nordlys.no",
+				Country:          "NO",
+				BusinessCategory: "BUSINESS_ENTITY",
+				VASPCategories:   []string{"Exchange"},
+				Contacts: []*api.Contact{
+					{Name: "Ingrid Solberg", Email: "ingrid.solberg@nordlys.no", Role: "Compliance Officer"},
+				},
+			}
+
+			created, err := s.client.CreateCompany(ctx, company)
+			require.NoError(err, "could not create company with contact")
+			require.NotZero(created.ID, "id should be set")
+			require.Len(created.Contacts, 1, "created company should include the contact")
+			require.NotZero(created.Contacts[0].ID, "contact id should be set")
+			require.Equal(created.ID, created.Contacts[0].CompanyID, "contact should belong to the company")
+
+			contacts, err := s.client.ListCompanyContacts(ctx, created.ID)
+			require.NoError(err, "could not list company contacts")
+			require.Len(contacts, 1, "company should have exactly one contact")
+			require.Equal("ingrid.solberg@nordlys.no", contacts[0].Email)
+		})
+
+		s.Run("InvalidContact", func() {
+			require := s.Require()
+			company := &api.Company{
+				Domain:           "fjord.no",
+				Name:             "Fjord Custody AS",
+				Website:          "https://fjord.no",
+				Country:          "NO",
+				BusinessCategory: "BUSINESS_ENTITY",
+				Contacts:         []*api.Contact{{Name: "", Email: "not-an-email"}},
+			}
+
+			created, err := s.client.CreateCompany(ctx, company)
+			require.Error(err, "expected validation error for invalid contact")
+			require.EqualError(err, "[422] 2 validation errors occurred")
+			require.Nil(created, "company should be nil")
+
+			// The company must not have been created when the contact is invalid.
+			companies, err := s.client.ListCompanies(ctx)
+			require.NoError(err, "could not list companies")
+			for _, c := range companies {
+				require.NotEqual("fjord.no", c.Domain, "company should not have been created")
+			}
+		})
+
 		s.Run("Empty", func() {
 			require := s.Require()
 			created, err := s.client.CreateCompany(ctx, &api.Company{})

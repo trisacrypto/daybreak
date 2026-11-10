@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"encoding/base32"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -92,7 +91,6 @@ func (db *DB) Sessions(keyPairs ...[]byte) (_ sessions.Store, err error) {
 // Get should return a cached session.
 // Implements the gorilla Store interface for session management.
 func (db *SessionStore) Get(r *http.Request, name string) (*gsessions.Session, error) {
-	fmt.Printf("Getting session: %s\n", name)
 	return gsessions.GetRegistry(r).Get(db, name)
 }
 
@@ -109,10 +107,8 @@ func (db *SessionStore) New(r *http.Request, name string) (session *gsessions.Se
 	if c, errCookie := r.Cookie(name); errCookie == nil {
 		if err = securecookie.DecodeMulti(name, c.Value, &session.ID, db.codecs...); err == nil {
 			if err = db.load(session); err == nil {
-				fmt.Printf("DB record found for session, do not create a new session\n")
 				session.IsNew = false
 			} else if errors.Is(err, sql.ErrNoRows) {
-				fmt.Printf("No rows found for session\n")
 				err = nil
 			}
 		}

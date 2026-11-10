@@ -14,6 +14,7 @@ import (
 var (
 	NotFound      = Reply{Success: false, Error: "resource not found"}
 	NotAllowed    = Reply{Success: false, Error: "method not allowed"}
+	Unauthorized  = Reply{Success: false, Error: "authorized access only"}
 	InternalError = Reply{Success: false, Error: "an internal error occurred"}
 )
 

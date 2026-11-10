@@ -57,11 +57,13 @@ func (s *Server) CreateCompany(ctx context.Context, c *gin.Context) *errors.HTTP
 	}
 
 	company = in.Model()
-	if err = s.db.CreateCompany(ctx, company); err != nil {
-		if errors.Is(err, errors.ErrAlreadyExists) {
-			return api.Error(http.StatusConflict, err, "company already exists")
-		}
-		return api.Error(http.StatusInternalServerError, err, "failed to create company")
+	contacts := make([]*db.Contact, 0, len(in.Contacts))
+	for _, contact := range in.Contacts {
+		contacts = append(contacts, contact.Model())
+	}
+
+	if herr := s.createCompany(ctx, company, contacts); herr != nil {
+		return herr
 	}
 
 	// TODO: change to trigger created redirect to the company detail page.
@@ -69,7 +71,56 @@ func (s *Server) CreateCompany(ctx context.Context, c *gin.Context) *errors.HTTP
 		return nil
 	}
 
-	c.JSON(http.StatusCreated, api.NewCompany(company))
+	out := api.NewCompany(company)
+	for _, contact := range contacts {
+		out.Contacts = append(out.Contacts, api.NewContact(contact))
+	}
+
+	c.JSON(http.StatusCreated, out)
+	return nil
+}
+
+// createCompany atomically creates the company and any initial contacts, setting the
+// first contact as the company's primary contact.
+func (s *Server) createCompany(ctx context.Context, company *db.Company, contacts []*db.Contact) *errors.HTTP {
+	var (
+		tx  *db.Tx
+		err error
+	)
+
+	if tx, err = s.db.Begin(ctx, &sql.TxOptions{ReadOnly: false}); err != nil {
+		return api.Error(http.StatusInternalServerError, err, "failed to begin transaction")
+	}
+	defer tx.Rollback()
+
+	if err = tx.CreateCompany(company); err != nil {
+		if errors.Is(err, errors.ErrAlreadyExists) {
+			return api.Error(http.StatusConflict, err, "company already exists")
+		}
+		return api.Error(http.StatusInternalServerError, err, "failed to create company")
+	}
+
+	for _, contact := range contacts {
+		contact.CompanyID = company.ID
+		if err = tx.CreateContact(contact); err != nil {
+			if errors.Is(err, errors.ErrAlreadyExists) {
+				return api.Error(http.StatusConflict, err, "contact already exists")
+			}
+			return api.Error(http.StatusInternalServerError, err, "failed to create contact")
+		}
+	}
+
+	// The primary contact can only reference a contact row once it exists.
+	if len(contacts) > 0 {
+		company.PrimaryContact = uuid.NullUUID{UUID: contacts[0].ID, Valid: true}
+		if err = tx.UpdateCompany(company); err != nil {
+			return api.Error(http.StatusInternalServerError, err, "failed to set primary contact")
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return api.Error(http.StatusInternalServerError, err, "failed to commit transaction")
+	}
 	return nil
 }
 
