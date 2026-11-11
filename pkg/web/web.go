@@ -1,8 +1,10 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -159,23 +161,24 @@ func (r *Render) AddPattern(fsys fs.FS, pattern string, includes ...string) (err
 func (r *Render) FuncMap() template.FuncMap {
 	if r.funcs == nil {
 		r.funcs = template.FuncMap{
-			"camel":      camel,
-			"countries":  countries.Countries,
-			"country":    country,
-			"datetime":   datetime,
-			"dict":       dict,
-			"endswith":   endswith,
-			"flag":       flag,
-			"isNil":      isNil,
-			"join":       join,
-			"lowercase":  lowercase,
-			"moment":     humanize.Time,
-			"rfc3339":    rfc3339,
-			"startswith": startswith,
-			"static":     static(),
-			"titlecase":  titlecase,
-			"truncate":   truncate,
-			"uppercase":  uppercase,
+			"camel":        camel,
+			"countries":    countries.Countries,
+			"country":      country,
+			"datetime":     datetime,
+			"dict":         dict,
+			"endswith":     endswith,
+			"flag":         flag,
+			"isNil":        isNil,
+			"join":         join,
+			"lowercase":    lowercase,
+			"moment":       humanize.Time,
+			"prettifyJSON": prettifyJSON,
+			"rfc3339":      rfc3339,
+			"startswith":   startswith,
+			"static":       static(),
+			"titlecase":    titlecase,
+			"truncate":     truncate,
+			"uppercase":    uppercase,
 		}
 	}
 	return r.funcs
@@ -288,4 +291,16 @@ func dict(values ...interface{}) (map[string]interface{}, error) {
 		dict[key] = values[i+1]
 	}
 	return dict, nil
+}
+
+func prettifyJSON(v json.RawMessage) string {
+	if len(v) == 0 {
+		return ""
+	}
+
+	var buf bytes.Buffer
+	if err := json.Indent(&buf, v, "", "    "); err == nil {
+		return buf.String()
+	}
+	return ""
 }

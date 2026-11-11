@@ -20,12 +20,93 @@
   </div>
 </div>
 
+<!-- Company Information -->
 <div class="row">
   <div class="col-12">
-
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-header-title">Company Information</h4>
+        {{- if not .VerifiedOn.IsZero }}
+        <span class="badge text-bg-success-subtle" title='Verified on {{ .VerifiedOn.Format "Jan 02, 2006" }}'>
+          <i class="fe fe-check-circle"></i> Verified
+        </span>
+        {{- else }}
+        <span class="badge text-bg-danger-subtle">
+          <i class="fe fe-x-circle"></i> Unverified
+        </span>
+        {{- end }}
+      </div>
+      <div class="card-body">
+        <div class="row gy-4">
+          <div class="col-12 col-md-6">
+            <dl class="d-flex flex-column gap-4 mb-0">
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Name</dt>
+                <dd class="mb-0 text-break">{{ .Name }}</dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Website</dt>
+                <dd class="mb-0 text-break">
+                  {{- if .Website }}
+                  <a href="{{ .Website }}" target="_blank" rel="noopener noreferrer">{{ .Website }}</a>
+                  {{- else }}
+                  <span class="text-body-secondary">&mdash;</span>
+                  {{- end }}
+                </dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Country</dt>
+                <dd class="mb-0">
+                  {{- if .Country }}
+                  {{ flag .Country }} {{ country .Country }}
+                  {{- else }}
+                  <span class="text-body-secondary">&mdash;</span>
+                  {{- end }}
+                </dd>
+              </div>
+            </dl>
+          </div>
+          <div class="col-12 col-md-6">
+            <dl class="d-flex flex-column gap-4 mb-0">
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Domain</dt>
+                <dd class="mb-0 text-break">{{ .Domain }}</dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Business Category</dt>
+                <dd class="mb-0">
+                  {{- if .BusinessCategory }}
+                  {{ titlecase .BusinessCategory }}
+                  {{- else }}
+                  <span class="text-body-secondary">&mdash;</span>
+                  {{- end }}
+                </dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">VASP Categories</dt>
+                <dd class="mb-0 d-flex flex-wrap gap-1">
+                  {{- range .VASPCategories }}
+                  <span class="badge text-bg-primary-subtle">{{ . }}</span>
+                  {{- else }}
+                  <span class="text-body-secondary">&mdash;</span>
+                  {{- end }}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="d-flex flex-wrap justify-content-between column-gap-4 row-gap-1 small text-body-secondary">
+          <span>ID: <span class="font-monospace">{{ .ID }}</span></span>
+          <span>Modified <time datetime="{{ rfc3339 .Modified }}">{{ moment .Modified }}</time></span>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
+<!-- Contacts Management -->
 <div class="row">
   <div class="col">
     <div class="card">
@@ -47,6 +128,23 @@
             <span class="visually-hidden">Loading...</span>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IVMS101 JSON Display -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-header-title">IVMS101 Record</h4>
+      </div>
+      <div class="card-body bg-dark">
+        <pre class="higlight bg-dark mb-0 hljs language-json"><code class="language-json">{{ .IVMS101 | prettifyJSON }}</code></pre>
+      </div>
+      <div class="card-footer">
+        <!-- TODO: Add Code Highlighting and Validation -->
       </div>
     </div>
   </div>

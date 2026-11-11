@@ -50,6 +50,7 @@ func Fixture(path string) (records []*GDSRecord, err error) {
 }
 
 func (g *GDSRecord) Model() *db.Company {
+	g.IVMSRecord = normalizeJSON(g.IVMSRecord)
 	return &db.Company{
 		ID:               g.DirectoryID,
 		LEI:              sql.NullString{String: g.LEI, Valid: g.LEI != ""},
