@@ -66,7 +66,7 @@ export function createList(elem) {
 }
 
 // Initialize flatpickr component for selecting a date on the specified element using
-// DashKit default options and DaskKit styling.
+// DashKit default options and DashKit styling.
 export function createFlatpickr(elem) {
   const options = elem.dataset.flatpickr ? JSON.parse(elem.dataset.flatpickr) : {};
   flatpickr(elem, options);

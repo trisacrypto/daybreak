@@ -1,0 +1,34 @@
+{{ template "page.html" . }}
+{{- define "title" }}Edit Company | Daybreak{{ end }}
+
+{{- define "modals" }}
+{{- end }}
+
+{{- define "alerts" }}
+<div class="pageAlerts"></div>
+{{- end }}
+
+{{- define "page-content" }}
+{{- with .Company }}
+<div class="header mt-md-5">
+  <div class="header-body">
+    <!-- Header -->
+    {{ template "companiesHeader" . }}
+
+    <!-- Tabs -->
+    {{ template "companiesTabs" dict "Page" $.Page "ID" .ID }}
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+
+  </div>
+</div>
+{{- end }}
+{{- end }}
+
+{{- define "appcode" }}
+<script type="module" src="/static/js/modules/components.js"></script>
+<script type="module" src="/static/js/companies/detail.js"></script>
+{{- end }}

@@ -2,33 +2,21 @@
 {{- define "title" }}Company Detail | Daybreak{{ end }}
 
 {{- define "modals" }}
+{{- with .Company }}
+{{ template "createContactModal" . }}
+{{ template "deleteContactModal" . }}
 {{- end }}
-
-{{- define "alerts" }}
-<div class="pageAlerts"></div>
-{{- end }}
-
-{{- define "tabs" }}
 {{- end }}
 
 {{- define "page-content" }}
 {{- with .Company }}
 <div class="header mt-md-5">
   <div class="header-body">
-    <div class="row align-items-center">
-      <div class="col">
-        <!-- Pretitle -->
-        <h6 class="header-pretitle"><a href="/">Counterparties</a></h6>
+    <!-- Header -->
+    {{ template "companiesHeader" . }}
 
-        <!-- Title -->
-        <h1 class="header-title">{{ .Name }}</h1>
-      </div>
-      <div class="col-auto">
-        <a href="/" class="btn btn-white lift" title="Back to Counterparties">
-          <i class="fe fe-arrow-left"></i>
-        </a>
-      </div>
-    </div>
+    <!-- Tabs -->
+    {{ template "companiesTabs" dict "Page" $.Page "ID" .ID }}
   </div>
 </div>
 
@@ -43,15 +31,20 @@
     <div class="card">
       <div class="card-header">
         <h4 class="card-header-title">Contacts</h4>
-        <button id="createContactBtn" class="btn btn-sm btn-white" data-bs-toggle="modal" data-bs-target="#createContactModal"></button>
+        <button id="createContactBtn" class="btn btn-sm btn-white" data-bs-toggle="modal" data-bs-target="#createContactModal">
+          <i class="fe fe-plus-circle"></i> Add
+        </button>
       </div>
 
-      <div id="contacts" class="card-body">
-        <div class="row">
-          <div class="col-12 text-center">
-            <div class="spinner-border" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
+      <div id="contacts"
+        hx-get="/v1/companies/{{ .ID }}/contacts"
+        hx-trigger="load, contact-created from:body, contact-updated from:body, contact-deleted from:body"
+        hx-target="#contacts"
+        hx-swap="innerHTML"
+      >
+        <div class="card-body text-center">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
           </div>
         </div>
       </div>
@@ -63,5 +56,6 @@
 
 {{- define "appcode" }}
 <script type="module" src="/static/js/modules/components.js"></script>
+<script type="module" src="/static/js/modules/alerts.js"></script>
 <script type="module" src="/static/js/companies/detail.js"></script>
 {{- end }}

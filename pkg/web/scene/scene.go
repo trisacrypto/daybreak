@@ -90,3 +90,21 @@ func (s Scene) Companies() []*api.Company {
 	}
 	return nil
 }
+
+func (s Scene) Company() *api.Company {
+	if data, ok := s[APIData]; ok {
+		if out, ok := data.(*api.Company); ok {
+			return out
+		}
+	}
+	return nil
+}
+
+func (s Scene) Contacts() []*api.Contact {
+	if data, ok := s[APIData]; ok {
+		if out, ok := data.([]*api.Contact); ok {
+			return out
+		}
+	}
+	return nil
+}

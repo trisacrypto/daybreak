@@ -1,0 +1,18 @@
+{{- define "companiesTabs" -}}
+<div class="row align-items-center">
+  <div class="col">
+    <ul class="nav nav-tabs nav-overflow header-tabs">
+      <li class="nav-item">
+        <a href="/companies/{{ .ID }}" class='nav-link{{ if endswith .Page "detail" }} active{{ end }}'>
+          Detail
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/companies/{{ .ID }}/edit" class='nav-link{{ if endswith .Page "edit" }} active{{ end }}'>
+          Edit
+        </a>
+      </li>
+    </ul>
+  </div>
+</div>
+{{- end -}}
