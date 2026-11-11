@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -168,6 +169,7 @@ func (r *Render) FuncMap() template.FuncMap {
 			"dict":         dict,
 			"endswith":     endswith,
 			"flag":         flag,
+			"in":           slices.Contains[[]string, string],
 			"isNil":        isNil,
 			"join":         join,
 			"lowercase":    lowercase,

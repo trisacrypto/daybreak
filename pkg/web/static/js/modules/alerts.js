@@ -122,7 +122,6 @@ class Alerts {
   }
 
   danger(title, message, options) {
-    console.log('danger');
     return this.alert(title, message, { ...options, level: 'danger' });
   }
 
