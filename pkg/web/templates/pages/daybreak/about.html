@@ -1,0 +1,101 @@
+{{ template "page.html" . }}
+{{- define "title" }}About Daybreak{{ end }}
+{{- define "pretitle" }}Daybreak{{ end }}
+{{- define "pagetitle" }}About this Node{{ end }}
+
+{{- define "main" }}
+<!-- Cards -->
+<div class="row">
+  <div class="col-12 col-lg-6 col-xl">
+
+    <!-- Version  -->
+    <div class="card">
+      <div class="card-body">
+        <div class="row align-items-center gx-0">
+          <div class="col">
+
+            <!-- Title -->
+            <h6 class="text-uppercase text-body-secondary mb-2">
+              Version
+            </h6>
+
+            <!-- Heading -->
+            <span class="h2 mb-0">
+              {{ .Version }}
+            </span>
+
+          </div>
+          <div class="col-auto">
+
+            <!-- Icon -->
+            <span class="h2 fe fe-github text-body-secondary mb-0"></span>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="col-12 col-lg-6 col-xl">
+
+    <!-- Hours -->
+    <div class="card">
+      <div class="card-body">
+        <div class="row align-items-center gx-0">
+          <div class="col">
+
+            <!-- Title -->
+            <h6 class="text-uppercase text-body-secondary mb-2">
+              Status
+            </h6>
+
+            <!-- Heading -->
+            <span class="h2 mb-0">
+              {{ .Status | titlecase }}
+            </span>
+
+          </div>
+          <div class="col-auto">
+
+            <!-- Icon -->
+            <span class="h2 fe fe-briefcase text-body-secondary mb-0"></span>
+
+          </div>
+        </div> <!-- / .row -->
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col-12 col-lg-6 col-xl">
+
+    <!-- Uptime -->
+    <div class="card">
+      <div class="card-body">
+        <div class="row align-items-center gx-0">
+          <div class="col">
+
+            <!-- Title -->
+            <h6 class="text-uppercase text-body-secondary mb-2">
+              Uptime
+            </h6>
+
+            <!-- Heading -->
+            <span class="h2 mb-0">
+              {{ .Uptime }}
+            </span>
+
+          </div>
+          <div class="col-auto">
+
+            <!-- Icon -->
+            <span class="h2 fe fe-clock text-body-secondary mb-0"></span>
+
+          </div>
+        </div> <!-- / .row -->
+      </div>
+    </div>
+
+  </div>
+</div>
+{{- end }}

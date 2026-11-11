@@ -9,6 +9,7 @@ var (
 	// HTTP Server Errors
 	ErrMethodNotFound   = errors.New("resource not found")
 	ErrMethodNotAllowed = errors.New("method not allowed")
+	ErrNotAccepted      = errors.New("this content type is not accepted at this endpoint")
 
 	// Store/Database Errors
 	ErrInvalidDSN          = errors.New("invalid database DSN")

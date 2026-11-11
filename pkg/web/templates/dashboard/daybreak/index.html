@@ -1,0 +1,301 @@
+{{ template "dashboard.html" . }}
+{{ define "title" }}Daybreak Dashboard{{ end }}
+{{ define "pretitle" }}Daybreak{{ end }}
+{{ define "pagetitle" }}Dashboard{{ end }}
+
+{{- define "header-actions" }}
+{{- if not .IsViewOnly }}
+<button disabled class="btn btn-primary ms-2 lift" data-bs-toggle="modal" data-bs-target="#createEntryModal">
+  Add Daybreak Entry
+</button>
+{{- end }}
+{{- end }}
+
+{{- define "modals" }}
+{{ template "createEntryModal" . }}
+{{- end }}
+
+{{- define "alerts" }}
+<div class="pageAlerts"></div>
+{{- end }}
+
+{{- define "main" }}
+<!-- Cards -->
+<div class="row">
+  <div class="col-12 col-lg-6 col-xl">
+
+    <!-- Value  -->
+    <div class="card">
+      <div class="card-body">
+        <div class="row align-items-center gx-0">
+          <div class="col">
+
+            <!-- Title -->
+            <h6 class="text-uppercase text-body-secondary mb-2">
+              Companies
+            </h6>
+
+            <!-- Heading -->
+            <span class="h2 mb-0">
+              &mdash;
+            </span>
+
+          </div>
+          <div class="col-auto">
+
+            <!-- Icon -->
+            <span class="h2 fe fe-briefcase text-body-secondary mb-0"></span>
+
+          </div>
+        </div> <!-- / .row -->
+      </div>
+    </div>
+
+  </div>
+  <div class="col-12 col-lg-6 col-xl">
+
+    <!-- Hours -->
+    <div class="card">
+      <div class="card-body">
+        <div class="row align-items-center gx-0">
+          <div class="col">
+
+            <!-- Title -->
+            <h6 class="text-uppercase text-body-secondary mb-2">
+              Contacts
+            </h6>
+
+            <!-- Heading -->
+            <span class="h2 mb-0">
+              &mdash;
+            </span>
+
+          </div>
+          <div class="col-auto">
+
+            <!-- Icon -->
+            <span class="h2 fe fe-at-sign text-body-secondary mb-0"></span>
+
+          </div>
+        </div> <!-- / .row -->
+      </div>
+    </div>
+
+  </div>
+  <div class="col-12 col-lg-6 col-xl">
+
+    <!-- Exit -->
+    <div class="card">
+      <div class="card-body">
+        <div class="row align-items-center gx-0">
+          <div class="col">
+
+            <!-- Title -->
+            <h6 class="text-uppercase text-body-secondary mb-2">
+              Countries
+            </h6>
+
+            <!-- Heading -->
+            <span class="h2 mb-0">
+              &mdash;
+            </span>
+
+          </div>
+          <div class="col-auto">
+
+            <!-- Icon -->
+            <span class="h2 fe fe-globe text-body-secondary mb-0"></span>
+
+          </div>
+        </div> <!-- / .row -->
+      </div>
+    </div>
+
+  </div>
+  <div class="col-12 col-lg-6 col-xl">
+
+    <!-- Time -->
+    <div class="card">
+      <div class="card-body">
+        <div class="row align-items-center gx-0">
+          <div class="col">
+
+            <!-- Title -->
+            <h6 class="text-uppercase text-body-secondary mb-2">
+              Licenses
+            </h6>
+
+            <!-- Heading -->
+            <span class="h2 mb-0">
+              &mdash;
+            </span>
+
+          </div>
+          <div class="col-auto">
+
+            <!-- Icon -->
+            <span class="h2 fe fe-award text-body-secondary mb-0"></span>
+
+          </div>
+        </div> <!-- / .row -->
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="row">
+  <div class="col-12 col-xl-8">
+
+    <!-- Convertions -->
+    <div class="card">
+      <div class="card-header">
+
+        <!-- Title -->
+        <h4 class="card-header-title">
+          Global VASPs
+        </h4>
+
+      </div>
+      <div class="card-body">
+
+        <!-- Chart -->
+        <div class="chart">
+          <canvas id="globalVASPsChart" class="chart-canvas" width="906" height="300"
+            style="display: block; box-sizing: border-box; height: 300px; width: 906px;"></canvas>
+          <div id="chart-tooltip" role="tooltip" class="popover bs-popover-top"
+            style="visibility: hidden; left: 509.942px; top: 142.43px; transform: translateX(-50%) translateY(-100%) translateY(-1rem);">
+            <div class="popover-arrow translate-middle-x"></div>
+            <div class="popover-content">
+              <div>
+                <h3 class="popover-header text-center text-nowrap">Oct 7</h3>
+              </div>
+              <div>
+                <div class="popover-body d-flex align-items-center text-nowrap justify-content-center"><span
+                    class="popover-body-indicator" style="background-color: rgb(44, 123, 229);"></span> 18%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-4">
+
+    <!-- Traffic -->
+    <div class="card">
+      <div class="card-header">
+
+        <!-- Title -->
+        <h4 class="card-header-title">
+          Dataset Readiness
+        </h4>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs nav-tabs-sm card-header-tabs" role="tablist">
+          <li class="nav-item" data-toggle="chart" data-target="#datasetReadinessChart" data-trigger="click" data-action="toggle"
+            data-dataset="0" role="presentation">
+            <a href="#" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab">
+              Contacts
+            </a>
+          </li>
+          <li class="nav-item" data-toggle="chart" data-target="#datasetReadinessChart" data-trigger="click" data-action="toggle"
+            data-dataset="1" role="presentation">
+            <a href="#" class="nav-link" data-bs-toggle="tab" aria-selected="false" tabindex="-1" role="tab">
+              Completeness
+            </a>
+          </li>
+        </ul>
+
+      </div>
+      <div class="card-body">
+
+        <!-- Chart -->
+        <div class="chart chart-appended">
+          <canvas id="datasetReadinessChart" class="chart-canvas" data-toggle="legend" data-target="#datasetReadinessChartLegend"
+            width="416" height="240"
+            style="display: block; box-sizing: border-box; height: 240px; width: 416px;"></canvas>
+          <div id="chart-tooltip" role="tooltip" class="popover bs-popover-top"
+            style="visibility: hidden; left: 310.686px; top: 153.365px; transform: translateX(-50%) translateY(-100%) translateY(-1rem);">
+            <div class="popover-arrow translate-middle-x"></div>
+            <div class="popover-content">
+              <div>
+                <h3 class="popover-header text-center text-nowrap">Valid</h3>
+              </div>
+              <div>
+                <div class="popover-body d-flex align-items-center text-nowrap justify-content-center"><span
+                    class="popover-body-indicator" style="background-color: rgb(44, 123, 229);"></span>60%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div id="datasetReadinessChartLegend" class="chart-legend">
+          <div><span class="chart-legend-item"><span class="chart-legend-indicator"
+                style="background-color: #2C7BE5"></span>Valid</span><span class="chart-legend-item"><span
+                class="chart-legend-indicator" style="background-color: #A6C5F7"></span>Partial</span><span
+              class="chart-legend-item"><span class="chart-legend-indicator"
+                style="background-color: #D2DDEC"></span>Invalid</span></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-xl-6">
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-header-title">
+          Recent Counterparties
+        </h4>
+      </div>
+      <div class="table-responsive mb-0">
+      <table class="table table-sm table-nowrap card-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Website</th>
+            <th>Country</th>
+            <th>Category</th>
+            <th>Added</th>
+          </tr>
+        </thead>
+        <tbody class="list"></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-6">
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-header-title">
+          Recent Licenses
+        </h4>
+      </div>
+      <div class="table-responsive mb-0">
+        <table class="table table-sm table-nowrap card-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Expires</th>
+            </tr>
+          </thead>
+          <tbody class="list"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{{- end }}
+
+{{- define "appcode" }}
+<script type="module" src="/static/js/modules/components.js"></script>
+<script type="module" src="/static/js/htmx/helpers.js"></script>
+{{- end }}

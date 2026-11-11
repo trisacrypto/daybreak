@@ -55,7 +55,7 @@
       <tbody class="list fs-base">
         {{ range . }}
         <tr>
-          <td><span class="item-name">{{ .Name }}</span></td>
+          <td><span class="item-name"><a href="/companies/{{ .ID }}">{{ .Name }}</a></span></td>
           <td><a href="{{ .Website }}" target="_blank"><span class="item-website">{{ .Website }}</span></a></td>
           <td class="">{{ if .Country }}{{ flag .Country }} <span class="item-country">{{ country .Country
               }}</span>{{ else }}<span class="item-country">&mdash;</span>{{ end }}</td>
@@ -78,11 +78,11 @@
               </a>
 
               <div class="dropdown-menu dropdown-menu-end">
-                <a href="#!" class="dropdown-item">
+                <a href="/companies/{{ .ID }}" class="dropdown-item">
                   <i class="fe fe-eye"></i>
                   View
                 </a>
-                <a href="#!" class="dropdown-item">
+                <a href="/companies/{{ .ID }}/edit" class="dropdown-item">
                   <i class="fe fe-edit"></i>
                   Edit
                 </a>

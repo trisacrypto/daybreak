@@ -158,20 +158,22 @@ func (r *Render) AddPattern(fsys fs.FS, pattern string, includes ...string) (err
 func (r *Render) FuncMap() template.FuncMap {
 	if r.funcs == nil {
 		r.funcs = template.FuncMap{
-			"camel":     camel,
-			"countries": countries.Countries,
-			"country":   country,
-			"datetime":  datetime,
-			"flag":      flag,
-			"isNil":     isNil,
-			"join":      join,
-			"lowercase": lowercase,
-			"moment":    humanize.Time,
-			"rfc3339":   rfc3339,
-			"static":    static(),
-			"titlecase": titlecase,
-			"truncate":  truncate,
-			"uppercase": uppercase,
+			"camel":      camel,
+			"countries":  countries.Countries,
+			"country":    country,
+			"datetime":   datetime,
+			"flag":       flag,
+			"isNil":      isNil,
+			"join":       join,
+			"lowercase":  lowercase,
+			"moment":     humanize.Time,
+			"rfc3339":    rfc3339,
+			"static":     static(),
+			"titlecase":  titlecase,
+			"truncate":   truncate,
+			"uppercase":  uppercase,
+			"startswith": startswith,
+			"endswith":   endswith,
 		}
 	}
 	return r.funcs
@@ -261,4 +263,12 @@ func static() func(path string) string {
 		path = strings.TrimPrefix(path, "/")
 		return prefix + "/" + path
 	}
+}
+
+func startswith(s, prefix string) bool {
+	return strings.HasPrefix(s, prefix)
+}
+
+func endswith(s, suffix string) bool {
+	return strings.HasSuffix(s, suffix)
 }
