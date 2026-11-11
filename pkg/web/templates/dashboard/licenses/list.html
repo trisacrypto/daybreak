@@ -1,0 +1,40 @@
+{{ template "dashboard.html" . }}
+{{ define "title" }}License Management | Daybreak{{ end }}
+{{ define "pretitle" }}Daybreak{{ end }}
+{{ define "pagetitle" }}License Management{{ end }}
+
+{{- define "header-actions" }}
+{{- if not .IsViewOnly }}
+<button class="btn btn-primary ms-2 lift" data-bs-toggle="modal" data-bs-target="#createLicenseModal">
+  Create License
+</button>
+{{- end }}
+{{- end }}
+
+{{- define "modals" }}
+{{ template "createLicenseModal" . }}
+{{ template "deleteLicenseModal" . }}
+{{- end }}
+
+{{- define "alerts" }}
+<div class="pageAlerts"></div>
+{{- end }}
+
+{{- define "main" }}
+<section id="licenenses" hx-get="/v1/licenses" hx-trigger="load, license-created from:body, license-deleted from:body">
+  <div class="card">
+    <div class="card-body text-center">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  </div>
+</section>
+{{- end }}
+
+
+{{- define "appcode" }}
+<script type="module" src="/static/js/modules/components.js"></script>
+<script type="module" src="/static/js/htmx/helpers.js"></script>
+<script type="module" src="/static/js/licenses/index.js"></script>
+{{- end }}

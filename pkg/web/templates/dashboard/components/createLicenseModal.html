@@ -1,0 +1,22 @@
+{{ define "createLicenseModal" }}
+<div id="createLicenseModal" class="modal modal-lg" tabindex="-1">
+  <div class='modal-dialog'>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Create License</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="createLicenseForm" hx-post="/v1/licenses" hx-ext="form-json" hx-swap="none"
+          hx-disabled-elt="#createBtn">
+          <div id="createLicenseAlerts"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="createBtn" type="submit" form="createLicenseForm" class="btn btn-primary">Create</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}

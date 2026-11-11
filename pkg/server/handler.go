@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/trisacrypto/daybreak/pkg/api/v1"
 	"github.com/trisacrypto/daybreak/pkg/errors"
 	"github.com/trisacrypto/daybreak/pkg/web/scene"
 	"go.opentelemetry.io/otel/attribute"
@@ -75,5 +76,21 @@ func Wrap(name string, handler Handler, attrs ...attribute.KeyValue) gin.Handler
 				span.SetStatus(codes.Ok, name+" succeeded")
 			}
 		}
+	}
+}
+
+// A middleware that requires the client to accept HTML content. Used to prevent API
+// access to the UI pages and prevent confusion from API requests.
+func AcceptHTML(c *gin.Context) {
+	switch c.NegotiateFormat(gin.MIMEHTML, binding.MIMEJSON) {
+	case binding.MIMEHTML:
+		c.Next()
+	case binding.MIMEJSON:
+		c.AbortWithStatusJSON(
+			http.StatusNotAcceptable,
+			api.Error(http.StatusNotAcceptable, errors.ErrNotAccepted, "this is not an API endpoint"),
+		)
+	default:
+		c.AbortWithError(http.StatusNotAcceptable, errors.ErrNotAccepted)
 	}
 }

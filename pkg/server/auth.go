@@ -18,6 +18,7 @@ import (
 	"github.com/trisacrypto/daybreak/pkg/errors"
 	"github.com/trisacrypto/daybreak/pkg/web/scene"
 	"go.rtnl.ai/gimlet/htmx"
+	"go.rtnl.ai/x/gravatar"
 	"golang.org/x/oauth2"
 )
 
@@ -151,6 +152,7 @@ type UserInfo struct {
 	FamilyName    string `json:"family_name"`
 	GivenName     string `json:"given_name"`
 	Picture       string `json:"picture"`
+	Gravatar      string `json:"-"`
 }
 
 //============================================================================
@@ -195,5 +197,6 @@ func userInfo(ctx context.Context, token *oauth2.Token) (*UserInfo, error) {
 		return nil, err
 	}
 
+	userinfo.Gravatar = gravatar.New(userinfo.Email, nil)
 	return userinfo, nil
 }
