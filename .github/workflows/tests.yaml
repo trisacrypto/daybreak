@@ -22,7 +22,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.26.x
+          go-version: 1.27.x
 
       - name: Install Staticcheck
         run: go install honnef.co/go/tools/cmd/staticcheck@latest
@@ -47,7 +47,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.26.x
+          go-version: 1.27.x
 
       - name: Cache Speedup
         uses: actions/cache@v4
@@ -86,7 +86,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.26.x
+          go-version: 1.27.x
 
       - name: Cache Speedup
         uses: actions/cache@v4
