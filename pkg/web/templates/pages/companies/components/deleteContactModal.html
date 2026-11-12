@@ -1,0 +1,31 @@
+{{- define "deleteContactModal" -}}
+<div id="deleteContactModal" class="modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Delete Contact</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-light">
+          Deleting a contact removes it from this counterparty's compliance contacts and it will
+          no longer be available for sunrise protocol messages.
+        </div>
+        <p class="px-3 text-danger"><strong>Are you sure you want to delete the following contact?</strong></p>
+        <dl class="row px-3">
+          <dt class="col-5">Name:</dt>
+          <dd class="col-7" id="deleteContactName"></dd>
+          <dt class="col-5">Email:</dt>
+          <dd class="col-7" id="deleteContactEmail"></dd>
+          <dt class="col-5">Role:</dt>
+          <dd class="col-7" id="deleteContactRole"></dd>
+        </dl>
+      </div>
+      <div class="modal-footer">
+        <button id="deleteContactBtn" type="button" class="btn btn-danger" hx-swap="none">Delete</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{- end -}}

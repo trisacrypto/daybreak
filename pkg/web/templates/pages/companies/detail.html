@@ -2,58 +2,149 @@
 {{- define "title" }}Company Detail | Daybreak{{ end }}
 
 {{- define "modals" }}
+{{- with .Company }}
+{{ template "createContactModal" . }}
+{{ template "deleteContactModal" . }}
 {{- end }}
-
-{{- define "alerts" }}
-<div class="pageAlerts"></div>
-{{- end }}
-
-{{- define "tabs" }}
 {{- end }}
 
 {{- define "page-content" }}
 {{- with .Company }}
 <div class="header mt-md-5">
   <div class="header-body">
-    <div class="row align-items-center">
-      <div class="col">
-        <!-- Pretitle -->
-        <h6 class="header-pretitle"><a href="/">Counterparties</a></h6>
+    <!-- Header -->
+    {{ template "companiesHeader" . }}
 
-        <!-- Title -->
-        <h1 class="header-title">{{ .Name }}</h1>
+    <!-- Tabs -->
+    {{ template "companiesTabs" dict "Page" $.Page "ID" .ID }}
+  </div>
+</div>
+
+<!-- Company Information -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-header-title">Company Information</h4>
+        {{- if not .VerifiedOn.IsZero }}
+        <span class="badge text-bg-success-subtle" title='Verified on {{ .VerifiedOn.Format "Jan 02, 2006" }}'>
+          <i class="fe fe-check-circle"></i> Verified
+        </span>
+        {{- else }}
+        <span class="badge text-bg-danger-subtle">
+          <i class="fe fe-x-circle"></i> Unverified
+        </span>
+        {{- end }}
       </div>
-      <div class="col-auto">
-        <a href="/" class="btn btn-white lift" title="Back to Counterparties">
-          <i class="fe fe-arrow-left"></i>
-        </a>
+      <div class="card-body">
+        <div class="row gy-4">
+          <div class="col-12 col-md-6">
+            <dl class="d-flex flex-column gap-4 mb-0">
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Name</dt>
+                <dd class="mb-0 text-break">{{ .Name }}</dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Website</dt>
+                <dd class="mb-0 text-break">
+                  {{- if .Website }}
+                  <a href="{{ .Website }}" target="_blank" rel="noopener noreferrer">{{ .Website }}</a>
+                  {{- else }}
+                  <span class="text-body-secondary">&mdash;</span>
+                  {{- end }}
+                </dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Country</dt>
+                <dd class="mb-0">
+                  {{- if .Country }}
+                  {{ flag .Country }} {{ country .Country }}
+                  {{- else }}
+                  <span class="text-body-secondary">&mdash;</span>
+                  {{- end }}
+                </dd>
+              </div>
+            </dl>
+          </div>
+          <div class="col-12 col-md-6">
+            <dl class="d-flex flex-column gap-4 mb-0">
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Domain</dt>
+                <dd class="mb-0 text-break">{{ .Domain }}</dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Business Category</dt>
+                <dd class="mb-0">
+                  {{- if .BusinessCategory }}
+                  {{ titlecase .BusinessCategory }}
+                  {{- else }}
+                  <span class="text-body-secondary">&mdash;</span>
+                  {{- end }}
+                </dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">VASP Categories</dt>
+                <dd class="mb-0 d-flex flex-wrap gap-1">
+                  {{- range .VASPCategories }}
+                  <span class="badge text-bg-primary-subtle">{{ . }}</span>
+                  {{- else }}
+                  <span class="text-body-secondary">&mdash;</span>
+                  {{- end }}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="d-flex flex-wrap justify-content-between column-gap-4 row-gap-1 small text-body-secondary">
+          <span>ID: <span class="font-monospace">{{ .ID }}</span></span>
+          <span>Modified <time datetime="{{ rfc3339 .Modified }}">{{ moment .Modified }}</time></span>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="row">
-  <div class="col-12">
-
-  </div>
-</div>
-
+<!-- Contacts Management -->
 <div class="row">
   <div class="col">
     <div class="card">
       <div class="card-header">
         <h4 class="card-header-title">Contacts</h4>
-        <button id="createContactBtn" class="btn btn-sm btn-white" data-bs-toggle="modal" data-bs-target="#createContactModal"></button>
+        <button id="createContactBtn" class="btn btn-sm btn-white" data-bs-toggle="modal" data-bs-target="#createContactModal">
+          <i class="fe fe-plus-circle"></i> Add
+        </button>
       </div>
 
-      <div id="contacts" class="card-body">
-        <div class="row">
-          <div class="col-12 text-center">
-            <div class="spinner-border" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
+      <div id="contacts"
+        hx-get="/v1/companies/{{ .ID }}/contacts"
+        hx-trigger="load, contact-created from:body, contact-updated from:body, contact-deleted from:body"
+        hx-target="#contacts"
+        hx-swap="innerHTML"
+      >
+        <div class="card-body text-center">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IVMS101 JSON Display -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-header-title">IVMS101 Record</h4>
+      </div>
+      <div class="card-body bg-dark">
+        <pre class="higlight bg-dark mb-0 hljs language-json"><code class="language-json">{{ .IVMS101 | prettifyJSON }}</code></pre>
+      </div>
+      <div class="card-footer">
+        <!-- TODO: Add Code Highlighting and Validation -->
       </div>
     </div>
   </div>
@@ -63,5 +154,6 @@
 
 {{- define "appcode" }}
 <script type="module" src="/static/js/modules/components.js"></script>
+<script type="module" src="/static/js/modules/alerts.js"></script>
 <script type="module" src="/static/js/companies/detail.js"></script>
 {{- end }}

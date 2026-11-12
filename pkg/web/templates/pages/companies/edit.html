@@ -1,0 +1,196 @@
+{{ template "page.html" . }}
+{{- define "title" }}Edit Company | Daybreak{{ end }}
+
+{{- define "modals" }}
+  {{ with .Company }}
+  <div id="confirmDeleteModal" class="modal" tabindex="-1">
+    <div class='modal-dialog'>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title">Delete Daybreak Record?</h4>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="lead">Are you sure you want to delete this company?</p>
+        </div>
+        <div class="modal-footer">
+          <button id="deleteBtn" type="button" class="btn btn-danger" hx-delete="/v1/companies/{{ .ID }}">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{ end }}
+{{- end }}
+
+{{- define "page-content" }}
+{{- with .Company }}
+<div class="header mt-md-5">
+  <div class="header-body">
+    <!-- Header -->
+    {{ template "companiesHeader" . }}
+
+    <!-- Tabs -->
+    {{ template "companiesTabs" dict "Page" $.Page "ID" .ID }}
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <form id="editCompanyForm" hx-put="/v1/companies/{{ .ID }}" hx-ext="form-json" hx-swap="none"
+      hx-indicator="#loader" hx-disabled-elt="find button[type='submit']">
+
+      <h3 class="mb-0">Company Information</h3>
+      <small class="form-text text-body-secondary">
+        Basic information that is used to search and deduplicate the daybreak record.
+      </small>
+
+      <fieldset id="fieldsetCompany" class="mt-4">
+        <div class="row">
+          <div class="col-12">
+            <div class="form-group">
+              <label class="form-label mb-0" for="name">Name</label>
+              <small class="form-text text-body-secondary">
+                The searchable or legal name of the company.
+              </small>
+              <input type="text" class="form-control" id="name" name="name" value="{{ .Name }}" placeholder="Acme Company, LTD" required>
+              <div class="invalid-feedback"></div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="form-group">
+              <label class="form-label mb-0" for="country">Country</label>
+              <small class="form-text text-body-secondary">
+                The country the counterparty is registered in.
+              </small>
+              <select class="form-control" id="country" name="country">
+                <option value="" {{- if eq .Country "" }} selected {{ end -}} disabled>Select a country</option>
+                {{- $country := .Country }}
+                {{- range countries }}
+                <option value="{{ .Alpha2 }}" {{- if eq .Alpha2 $country }} selected {{ end -}}>{{ .ShortName }}</option>
+                {{- end }}
+              </select>
+              <div class="invalid-feedback"></div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="form-group">
+              <label class="form-label mb-0" for="name">LEI</label>
+              <small class="form-text text-body-secondary">
+                The optional Legal Entity Identifier of the company.
+              </small>
+              <input type="text" class="form-control" id="lei" name="lei" value="{{ .LEI }}" placeholder="GSAT00N4Q1AKFAMMDK61" maxlength="20">
+              <div class="invalid-feedback"></div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="form-group">
+              <label class="form-label mb-0" for="website">Website</label>
+              <small class="form-text text-body-secondary">
+                Website with VASP compliance information.
+              </small>
+              <input type="url" class="form-control" id="website" name="website" value="{{ .Website }}" placeholder="https://acme.com" required>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="form-group">
+              <label class="form-label mb-0" for="website">Domain</label>
+              <small class="form-text text-body-secondary">
+                The email domain of the company to match contacts.
+              </small>
+              <input type="text" class="form-control" id="domain" name="domain" value="{{ .Domain }}" placeholder="acme.com" required>
+              <div class="invalid-feedback"></div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="form-group">
+              <label class="form-label mb-0" for="business_category">Business Category</label>
+              <small class="form-text text-body-secondary">
+                The type of organization or entity.
+              </small>
+              <select class="form-control" id="business_category" name="business_category">
+                <option value="PRIVATE_ORGANIZATION" {{- if eq .BusinessCategory "PRIVATE_ORGANIZATION" }} selected{{ end -}}>Private Organization</option>
+                <option value="GOVERNMENT_ENTITY" {{- if eq .BusinessCategory "GOVERNMENT_ENTITY" }} selected{{ end -}}>Government Entity</option>
+                <option value="BUSINESS_ENTITY" {{- if eq .BusinessCategory "BUSINESS_ENTITY" }} selected{{ end -}}>Business Entity</option>
+                <option value="NON_COMMERCIAL_ENTITY" {{- if eq .BusinessCategory "NON_COMMERCIAL_ENTITY" }} selected{{ end -}}>Non-Commercial Entity</option>
+                <option value="UNKNOWN_ENTITY" {{- if eq .BusinessCategory "UNKNOWN_ENTITY" }} selected{{ end -}}>Unknown</option>
+              </select>
+              <div class="invalid-feedback"></div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="form-group">
+              <label class="form-label mb-0" for="vasp_categories">VASP Categories</label>
+              <small class="form-text text-body-secondary">
+                Hold Ctrl/Cmd to select multiple.
+              </small>
+              <select class="form-control" id="vasp_categories" name="vasp_categories[]" multiple size="5">
+                <option value="Exchange" {{- if in .VASPCategories "Exchange" }} selected{{ end -}}>Exchange</option>
+                <option value="DEX" {{- if in .VASPCategories "DEX" }} selected{{ end -}}>DEX</option>
+                <option value="P2P" {{- if in .VASPCategories "P2P" }} selected{{ end -}}>P2P</option>
+                <option value="Kiosk" {{- if in .VASPCategories "Kiosk" }} selected{{ end -}}>Kiosk</option>
+                <option value="Custodian" {{- if in .VASPCategories "Custodian" }} selected{{ end -}}>Custodian</option>
+                <option value="OTC" {{- if in .VASPCategories "OTC" }} selected{{ end -}}>OTC</option>
+                <option value="Fund" {{- if in .VASPCategories "Fund" }} selected{{ end -}}>Fund</option>
+                <option value="Project" {{- if in .VASPCategories "Project" }} selected{{ end -}}>Project</option>
+                <option value="Gambling" {{- if in .VASPCategories "Gambling" }} selected{{ end -}}>Gambling</option>
+                <option value="Miner" {{- if in .VASPCategories "Miner" }} selected{{ end -}}>Miner</option>
+                <option value="Mixer" {{- if in .VASPCategories "Mixer" }} selected{{ end -}}>Mixer</option>
+                <option value="Individual" {{- if in .VASPCategories "Individual" }} selected{{ end -}}>Individual</option>
+                <option value="Other" {{- if in .VASPCategories "Other" }} selected{{ end -}}>Other</option>
+                <option value="Unknown" {{- if in .VASPCategories "Unknown" }} selected{{ end -}}>Unknown</option>
+              </select>
+              <div class="invalid-feedback"></div>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <hr class="mt-4 mb-5">
+
+      <h3 class="mb-0">IVMS 101 Record</h3>
+      <small class="form-text text-body-secondary">
+        IVMS 101 record used for counterparty information in TRISA transfers.
+      </small>
+
+      <fieldset id="fieldsetIVMS101" class="my-4">
+        <div class="row">
+          <div class="col-12">
+            <div class="form-group">
+              <textarea class="form-control" id="ivms101" name="ivms101" rows="16">{{ prettifyJSON .IVMS101 }}</textarea>
+              <div class="invalid-feedback"></div>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <span id="loader" class="htmx-indicator spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    </form>
+  </div>
+</div>
+
+<hr class="mt-4 mb-5">
+
+<div class="row justify-content-between mb-7">
+  <div class="col-12 col-md-6">
+    <h4>Delete Company</h4>
+
+    <p class="small text-body-secondary mb-md-0">
+      This will delete the Daybreak record for this company and all associated contacts.
+      When Envoy syncs with the Daybreak directory, the counterparty record will be
+      archived and marked as deleted.
+    </p>
+
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">Delete</button>
+  </div>
+</div>
+{{- end }}
+{{- end }}
+
+{{- define "appcode" }}
+<script type="module" src="/static/js/modules/components.js"></script>
+<script type="module" src="/static/js/companies/edit.js"></script>
+{{- end }}

@@ -190,8 +190,8 @@ func TestContactValidate(t *testing.T) {
 			},
 			{
 				"IVMS101WrongJSONType",
-				func(c *api.Contact) { c.IVMS101 = json.RawMessage(`[]`) },
-				[]*validation.FieldError{validation.Invalid("ivms101", "json: cannot unmarshal array into Go value of type ivms101.serialNaturalPerson")},
+				func(c *api.Contact) { c.IVMS101 = json.RawMessage(`true`) },
+				[]*validation.FieldError{validation.Invalid("ivms101", "json: cannot unmarshal bool into Go value of type map[string]jsontext.Value")},
 			},
 			{
 				"IVMS101MissingName",

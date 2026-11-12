@@ -1,14 +1,18 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"embed"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
 	"log/slog"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -158,22 +162,25 @@ func (r *Render) AddPattern(fsys fs.FS, pattern string, includes ...string) (err
 func (r *Render) FuncMap() template.FuncMap {
 	if r.funcs == nil {
 		r.funcs = template.FuncMap{
-			"camel":      camel,
-			"countries":  countries.Countries,
-			"country":    country,
-			"datetime":   datetime,
-			"flag":       flag,
-			"isNil":      isNil,
-			"join":       join,
-			"lowercase":  lowercase,
-			"moment":     humanize.Time,
-			"rfc3339":    rfc3339,
-			"static":     static(),
-			"titlecase":  titlecase,
-			"truncate":   truncate,
-			"uppercase":  uppercase,
-			"startswith": startswith,
-			"endswith":   endswith,
+			"camel":        camel,
+			"countries":    countries.Countries,
+			"country":      country,
+			"datetime":     datetime,
+			"dict":         dict,
+			"endswith":     endswith,
+			"flag":         flag,
+			"in":           slices.Contains[[]string, string],
+			"isNil":        isNil,
+			"join":         join,
+			"lowercase":    lowercase,
+			"moment":       humanize.Time,
+			"prettifyJSON": prettifyJSON,
+			"rfc3339":      rfc3339,
+			"startswith":   startswith,
+			"static":       static(),
+			"titlecase":    titlecase,
+			"truncate":     truncate,
+			"uppercase":    uppercase,
 		}
 	}
 	return r.funcs
@@ -271,4 +278,31 @@ func startswith(s, prefix string) bool {
 
 func endswith(s, suffix string) bool {
 	return strings.HasSuffix(s, suffix)
+}
+
+func dict(values ...interface{}) (map[string]interface{}, error) {
+	if len(values)%2 != 0 {
+		return nil, errors.New("invalid dict call")
+	}
+	dict := make(map[string]interface{}, len(values)/2)
+	for i := 0; i < len(values); i += 2 {
+		key, ok := values[i].(string)
+		if !ok {
+			return nil, errors.New("dict keys must be strings")
+		}
+		dict[key] = values[i+1]
+	}
+	return dict, nil
+}
+
+func prettifyJSON(v json.RawMessage) string {
+	if len(v) == 0 {
+		return ""
+	}
+
+	var buf bytes.Buffer
+	if err := json.Indent(&buf, v, "", "    "); err == nil {
+		return buf.String()
+	}
+	return ""
 }

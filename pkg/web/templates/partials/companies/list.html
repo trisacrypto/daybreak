@@ -59,7 +59,7 @@
           <td><a href="{{ .Website }}" target="_blank"><span class="item-website">{{ .Website }}</span></a></td>
           <td class="">{{ if .Country }}{{ flag .Country }} <span class="item-country">{{ country .Country
               }}</span>{{ else }}<span class="item-country">&mdash;</span>{{ end }}</td>
-          <td><span class="item-category">{{ .BusinessCategory }}</span></td>
+          <td><span class="item-category">{{ titlecase .BusinessCategory }}</span></td>
           <td>
             {{- if and .VerifiedOn (not .VerifiedOn.IsZero) }}
             <span class="item-date-added d-none">{{ rfc3339 .VerifiedOn }}</span>

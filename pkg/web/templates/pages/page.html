@@ -3,11 +3,17 @@
 
 {{- template "sidebar" . }}
 {{- block "modals" . }}{{ end }}
-{{- block "alerts" . }}{{ end }}
 
 <main class="main-content">
   <div class="container-fluid">
-    <div class="row justify-content-center">
+    {{- block "alerts" . }}
+    <div class="row justify-content-center mt-3">
+      <div class="col-12 col-lg-10 col-xl-8 m-0 p-0">
+        <div class="pageAlerts p-0 m-0"></div>
+      </div>
+    </div>
+    {{ end }}
+    <div class="row justify-content-center mt-n3">
       <div class="col-12 col-lg-10 col-xl-8">
         {{- block "page-content" . }}
         {{- block "header" . }}

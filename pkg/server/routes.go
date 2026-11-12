@@ -88,6 +88,7 @@ func (s *Server) setupRoutes() (err error) {
 		uia.GET("/about", Wrap("ui.about", s.AboutPage))
 		uia.GET("/companies", Wrap("ui.companies.list", s.CompanyDashboardPage))
 		uia.GET("/companies/:id", Wrap("ui.company.detail", s.CompanyDetailPage))
+		uia.GET("/companies/:id/edit", Wrap("ui.company.edit", s.CompanyEditPage))
 		uia.GET("/licenses", Wrap("ui.licenses.list", s.LicenseDashboardPage))
 	}
 

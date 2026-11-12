@@ -1,1 +1,57 @@
-<p>TODO</p>
+<div class="table-responsive" id="contactList"
+  data-list='{"valueNames": ["item-name", "item-email", "item-role", "item-date-added"]}'>
+  {{- with .Contacts }}
+  <table class="table table-sm table-hover table-nowrap card-table">
+    <thead>
+      <tr>
+        <th>
+          <a class="list-sort text-muted" data-sort="item-name" href="#">Name</a>
+        </th>
+        <th>
+          <a class="list-sort text-muted" data-sort="item-email" href="#">Email</a>
+        </th>
+        <th>
+          <a class="list-sort text-muted" data-sort="item-role" href="#">Role</a>
+        </th>
+        <th colspan="2">
+          <a class="list-sort text-muted" data-sort="item-date-added" href="#">Added</a>
+        </th>
+      </tr>
+    </thead>
+    <tbody class="list fs-base">
+      {{ range . }}
+      <tr>
+        <td><span class="item-name">{{ .Name }}</span></td>
+        <td><a href="mailto:{{ .Email }}"><span class="item-email">{{ .Email }}</span></a></td>
+        <td><span class="item-role">{{ if .Role }}{{ .Role }}{{ else }}&mdash;{{ end }}</span></td>
+        <td>
+          <span class="item-date-added d-none">{{ rfc3339 .Created }}</span>
+          <time datetime="{{ rfc3339 .Created }}">{{ .Created.Format "Jan 02, 2006" }}</time>
+        </td>
+        <td class="text-end">
+          <!-- Dropdown -->
+          <div class="dropdown">
+            <a class="dropdown-ellipses dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+              aria-haspopup="true" aria-expanded="false">
+              <i class="fe fe-more-vertical"></i>
+            </a>
+
+            <div class="dropdown-menu dropdown-menu-end">
+              <a href="#!" class="dropdown-item"
+                 data-bs-toggle="modal" data-bs-target="#deleteContactModal"
+                 data-bs-contact-id="{{ .ID }}" data-bs-name="{{ .Name }}"
+                 data-bs-email="{{ .Email }}" data-bs-role="{{ if .Role }}{{ .Role }}{{ else }}&mdash;{{ end }}">
+                <i class="fe fe-trash"></i>
+                Delete
+              </a>
+            </div>
+          </div>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  {{- else }}
+  <p class="text-muted text-center py-4 mb-0">No contacts have been added for this company yet.</p>
+  {{- end }}
+</div>

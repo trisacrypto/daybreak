@@ -1,0 +1,42 @@
+{{- define "createContactModal" -}}
+<div id="createContactModal" class="modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Add Contact</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="createContactForm" hx-post="/v1/companies/{{ .ID }}/contacts" hx-ext="form-json" hx-swap="none"
+          hx-disabled-elt="#createContactSubmitBtn">
+          <div id="createContactAlerts"></div>
+
+          <div class="form-group">
+            <label class="form-label mb-0" for="createContactName">Name</label>
+            <small class="form-text text-body-secondary">Full name of the contact</small>
+            <input type="text" class="form-control" id="createContactName" name="name" placeholder="Jane Doe" required>
+            <div class="invalid-feedback"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label mb-0" for="createContactEmail">Email</label>
+            <small class="form-text text-body-secondary">Email address without name</small>
+            <input type="email" class="form-control" id="createContactEmail" name="email"
+              placeholder="compliance@acme.com" required>
+            <div class="invalid-feedback"></div>
+          </div>
+          <div class="form-group mb-0">
+            <label class="form-label mb-0" for="createContactRole">Role</label>
+            <small class="form-text text-body-secondary">Optional, e.g. Compliance Officer.</small>
+            <input type="text" class="form-control" id="createContactRole" name="role" placeholder="Compliance Officer">
+            <div class="invalid-feedback"></div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="createContactSubmitBtn" type="submit" form="createContactForm" class="btn btn-primary">Create</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{- end -}}

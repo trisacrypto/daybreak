@@ -16,6 +16,10 @@ import (
 	"go.rtnl.ai/x/validation"
 )
 
+func init() {
+	ivms101.AllowRekeying()
+}
+
 type Company struct {
 	ID               uuid.UUID       `json:"id"`
 	LEI              string          `json:"lei"`

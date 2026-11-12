@@ -1,0 +1,19 @@
+{{- define "companiesHeader" -}}
+<div class="row align-items-center">
+  <div class="col">
+    <!-- Pretitle -->
+    <h6 class="header-pretitle"><a href="/companies">Counterparties</a></h6>
+
+    <!-- Title -->
+    <h1 class="header-title">
+      {{ if .Country }} {{ flag .Country }} {{ end }}
+      {{ .Name }}
+    </h1>
+  </div>
+  <div class="col-auto">
+    <a href="/companies" class="btn btn-white lift" title="Back to Counterparties">
+      <i class="fe fe-arrow-left"></i>
+    </a>
+  </div>
+</div>
+{{- end -}}
