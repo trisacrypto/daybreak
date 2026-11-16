@@ -11,10 +11,10 @@ import (
 // Version component constants for the current build.
 const (
 	VersionMajor         = 0
-	VersionMinor         = 1
+	VersionMinor         = 2
 	VersionPatch         = 0
 	VersionReleaseLevel  = "alpha"
-	VersionReleaseNumber = 1
+	VersionReleaseNumber = 2
 )
 
 // ServiceName is the name of the service.
