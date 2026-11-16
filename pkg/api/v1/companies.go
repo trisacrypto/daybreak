@@ -29,6 +29,7 @@ type Company struct {
 	Country          string          `json:"country"`
 	BusinessCategory string          `json:"business_category"`
 	VASPCategories   []string        `json:"vasp_categories"`
+	NumContacts      int             `json:"num_contacts"`
 	IVMS101          json.RawMessage `json:"ivms101"`
 	VerifiedOn       time.Time       `json:"verified_on"`
 	Created          time.Time       `json:"created"`
@@ -49,6 +50,7 @@ func NewCompany(model *db.Company) *Company {
 		Country:          model.Country,
 		BusinessCategory: model.BusinessCategory.String,
 		VASPCategories:   model.VASPCategories,
+		NumContacts:      int(model.NumContacts),
 		IVMS101:          json.RawMessage(model.IVMS101.JSONB),
 		VerifiedOn:       model.VerifiedOn.Time(),
 		Created:          model.Created.Time(),
@@ -123,6 +125,10 @@ func (c *Company) Validate(method string) (err error) {
 
 	if c.VASPCategories, verr = ValidateVASPCategories(c.VASPCategories); verr != nil {
 		err = validation.Error(err, verr)
+	}
+
+	if c.NumContacts > 0 {
+		err = validation.Error(err, validation.ReadOnly("num_contacts"))
 	}
 
 	// Change null or empty object to an empty IVMS101 record

@@ -1,10 +1,10 @@
 {{ template "base" . }}
 {{ define "content" -}}
 
-{{- template "sidebar" . }}
 {{- block "modals" . }}{{ end }}
+{{- template "sidebar" . }}
 
-<main class="main-content">
+<div class="main-content">
   {{ block "dashboard" . }}
   <div class="container-fluid">
     <div class="row justify-content-center">

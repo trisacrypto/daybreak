@@ -1,0 +1,36 @@
+{{- with .Licenses -}}
+<div class="table-responsive mb-0">
+  <table class="table table-sm table-nowrap card-table">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Expires</th>
+      </tr>
+    </thead>
+    <tbody class="list">
+      {{- range . -}}
+      <tr>
+        <td>{{ .User }}</td>
+        <td>{{ .Expires }}</td>
+      </tr>
+      {{- end -}}
+    </tbody>
+  </table>
+</div>
+{{- else -}}
+<div class="table-responsive mb-0">
+  <table class="table table-sm table-nowrap card-table">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Expires</th>
+      </tr>
+    </thead>
+    <tbody class="list">
+      <tr>
+        <td colspan="2" class="text-center">No recent licenses found</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{{- end -}}

@@ -163,6 +163,8 @@ func (r *Render) FuncMap() template.FuncMap {
 	if r.funcs == nil {
 		r.funcs = template.FuncMap{
 			"camel":        camel,
+			"comma":        humanize.Comma[int64],
+			"commaf":       humanize.Commaf[float64],
 			"countries":    countries.Countries,
 			"country":      country,
 			"datetime":     datetime,
