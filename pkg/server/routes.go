@@ -127,6 +127,8 @@ func (s *Server) setupRoutes() (err error) {
 		dash := v1a.Group("/dashboard", htmx.Only)
 		{
 			dash.GET("/info", Wrap("api.dashboard.info", s.DashboardInfo))
+			dash.GET("/counterparties", Wrap("api.dashboard.counterparties", s.DashboardCounterparties))
+			dash.GET("/licenses", Wrap("api.dashboard.licenses", s.DashboardLicenses))
 		}
 	}
 

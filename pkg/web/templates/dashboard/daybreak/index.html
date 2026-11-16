@@ -65,19 +65,12 @@
           Recent Counterparties
         </h4>
       </div>
-      <div class="table-responsive mb-0">
-      <table class="table table-sm table-nowrap card-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Website</th>
-            <th>Country</th>
-            <th>Category</th>
-            <th>Added</th>
-          </tr>
-        </thead>
-        <tbody class="list"></tbody>
-      </table>
+      <div hx-get="/v1/dashboard/counterparties" hx-trigger="load" hx-swap="innerHTML">
+        <div class="card-body text-center">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -89,16 +82,12 @@
           Recent Licenses
         </h4>
       </div>
-      <div class="table-responsive mb-0">
-        <table class="table table-sm table-nowrap card-table">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Expires</th>
-            </tr>
-          </thead>
-          <tbody class="list"></tbody>
-        </table>
+      <div hx-get="/v1/dashboard/licenses" hx-trigger="load" hx-swap="innerHTML">
+        <div class="card-body text-center">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

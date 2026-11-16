@@ -18,6 +18,7 @@ type Company struct {
 	Country          string
 	BusinessCategory sql.NullString
 	VASPCategories   fields.StringArray
+	NumContacts      int64
 	IVMS101          fields.NullJSONB
 	PrimaryContact   uuid.NullUUID
 	VerifiedOn       fields.Timestamp
@@ -35,6 +36,7 @@ func (c *Company) Scan(scanner Scanner) error {
 		&c.Country,
 		&c.BusinessCategory,
 		&c.VASPCategories,
+		&c.NumContacts,
 		&c.IVMS101,
 		&c.PrimaryContact,
 		&c.VerifiedOn,
@@ -47,11 +49,33 @@ func (c *Company) Scan(scanner Scanner) error {
 // Transaction CRUD
 //============================================================================
 
-const listCompaniesSQL = `SELECT id, lei, domain, name, website, country, business_category, vasp_categories, ivms101, primary_contact_id, verified_on, created, modified FROM companies;`
+const listCompaniesSQL = `
+SELECT c.id, c.lei, c.domain, c.name, c.website, c.country, c.business_category, c.vasp_categories, count(co.id) as num_contacts, c.ivms101, c.primary_contact_id, c.verified_on, c.created, c.modified
+    FROM companies c
+LEFT JOIN contacts co ON c.id = co.company_id
+GROUP BY c.id;
+`
 
 func (tx *Tx) ListCompanies() (companies *Iterator[Company, *Company], err error) {
 	var rows *sql.Rows
 	if rows, err = tx.Query(listCompaniesSQL); err != nil {
+		return nil, err
+	}
+	return Iterate[Company](rows), nil
+}
+
+const recentCompaniesSQL = `
+SELECT c.id, c.lei, c.domain, c.name, c.website, c.country, c.business_category, c.vasp_categories, count(co.id) as num_contacts, c.ivms101, c.primary_contact_id, c.verified_on, c.created, c.modified
+    FROM companies c
+LEFT JOIN contacts co ON c.id = co.company_id
+GROUP BY c.id
+ORDER BY c.modified DESC
+LIMIT :limit;
+`
+
+func (tx *Tx) RecentCompanies(limit int) (companies *Iterator[Company, *Company], err error) {
+	var rows *sql.Rows
+	if rows, err = tx.Query(recentCompaniesSQL, sql.Named("limit", limit)); err != nil {
 		return nil, err
 	}
 	return Iterate[Company](rows), nil
@@ -92,7 +116,13 @@ func (tx *Tx) CreateCompany(company *Company) (err error) {
 	return nil
 }
 
-const retrieveCompanySQL = `SELECT id, lei, domain, name, website, country, business_category, vasp_categories, ivms101, primary_contact_id, verified_on, created, modified FROM companies WHERE id=:id;`
+const retrieveCompanySQL = `
+SELECT c.id, c.lei, c.domain, c.name, c.website, c.country, c.business_category, c.vasp_categories, count(co.id) as num_contacts, c.ivms101, c.primary_contact_id, c.verified_on, c.created, c.modified
+    FROM companies c
+LEFT JOIN contacts co ON c.id = co.company_id
+WHERE c.id = :id
+GROUP BY c.id;
+`
 
 func (tx *Tx) RetrieveCompany(id uuid.UUID) (company *Company, err error) {
 	company = &Company{}
@@ -195,6 +225,20 @@ func (db *DB) ListCompanies(ctx context.Context) (_ []*Company, err error) {
 		return nil, err
 	}
 
+	return iter.List()
+}
+
+func (db *DB) RecentCompanies(ctx context.Context, limit int) (companies []*Company, err error) {
+	var tx *Tx
+	if tx, err = db.Begin(ctx, &sql.TxOptions{ReadOnly: true}); err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	var iter *Iterator[Company, *Company]
+	if iter, err = tx.RecentCompanies(limit); err != nil {
+		return nil, err
+	}
 	return iter.List()
 }
 

@@ -1,0 +1,43 @@
+
+{{- with .Companies -}}
+<div class="table-responsive mb-0">
+  <table class="table table-sm table-nowrap card-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Country</th>
+        <th>Category</th>
+        <th>Contacts</th>
+      </tr>
+    </thead>
+    <tbody class="list">
+      {{- range . -}}
+      <tr>
+        <td><a href="/companies/{{ .ID }}">{{ .Name }}</a></td>
+        <td>{{ if .Country }}{{ flag .Country }}{{ else }}&mdash;{{ end }}</td>
+        <td>{{ titlecase .BusinessCategory }}</td>
+        <td>{{ .NumContacts }}</td>
+      </tr>
+      {{- end -}}
+    </tbody>
+  </table>
+</div>
+{{- else -}}
+<div class="table-responsive mb-0">
+  <table class="table table-sm table-nowrap card-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Country</th>
+        <th>Category</th>
+        <th>Contacts</th>
+      </tr>
+    </thead>
+    <tbody class="list">
+      <tr>
+        <td colspan="4" class="text-center">No recent companies found</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{{- end -}}
