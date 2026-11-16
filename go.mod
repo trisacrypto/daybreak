@@ -19,7 +19,7 @@ require (
 	go.rtnl.ai/confire v1.2.0
 	go.rtnl.ai/gimlet v1.11.1
 	go.rtnl.ai/ulid v1.3.0
-	go.rtnl.ai/x v1.23.0
+	go.rtnl.ai/x v1.25.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/text v0.43.0
 	modernc.org/sqlite v1.61.0

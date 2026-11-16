@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/trisacrypto/daybreak/pkg"
 	"github.com/trisacrypto/daybreak/pkg/web"
+	"go.rtnl.ai/gimlet/htmx"
 	"go.rtnl.ai/gimlet/logger"
 )
 
@@ -118,6 +119,15 @@ func (s *Server) setupRoutes() (err error) {
 		v1a.GET("/contacts/:id", Wrap("api.contacts.retrieve", s.RetrieveContact))
 		v1a.PUT("/contacts/:id", Wrap("api.contacts.update", s.UpdateContact))
 		v1a.DELETE("/contacts/:id", Wrap("api.contacts.delete", s.DeleteContact))
+
+		// Informational endpoints and statistics
+		v1a.GET("/countries", Wrap("api.countries.counts", s.CountryCounts))
+
+		// HTMX only endpoints for the dashboard
+		dash := v1a.Group("/dashboard", htmx.Only)
+		{
+			dash.GET("/info", Wrap("api.dashboard.info", s.DashboardInfo))
+		}
 	}
 
 	return nil
