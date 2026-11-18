@@ -36,7 +36,7 @@ func (s *Suite) TestLicenseResource() {
 				Email:       "annika.lindqvist@norrskenpay.se",
 				Description: "Production Envoy node for Norrsken Pay AB.",
 				Permissions: []string{"daybreak:sync", "daybreak:download"},
-				Expires:     time.Date(2030, time.January, 1, 0, 0, 0, 0, time.UTC),
+				Expires:     api.Expiration(fields.Time(time.Date(2030, time.January, 1, 0, 0, 0, 0, time.UTC))),
 			}
 
 			created, err := s.client.CreateLicense(ctx, license)
@@ -167,7 +167,7 @@ func (s *Suite) TestLicenseResource() {
 			require.Equal(int64(1), license.Downloads, "license downloads should match")
 			require.NotNil(license.LastAccess, "last access should be set")
 			require.False(license.LastAccess.IsZero(), "last access should be set")
-			require.True(expires.Equal(license.Expires), "license expires should match")
+			require.True(expires.Equal(license.Expires.Time), "license expires should match")
 			require.NotZero(license.Created, "created should be set")
 			require.NotZero(license.Modified, "modified should be set")
 		})
@@ -215,7 +215,7 @@ func (s *Suite) TestLicenseResource() {
 				Email:       "compliance-eng@norrskenpay.se",
 				Description: "Production Envoy node for Norrsken Pay AB.",
 				Permissions: []string{"counterparties:admin", "daybreak:sync", "daybreak:download"},
-				Expires:     time.Date(2032, time.June, 1, 0, 0, 0, 0, time.UTC),
+				Expires:     api.Expiration(fields.Time(time.Date(2032, time.June, 1, 0, 0, 0, 0, time.UTC))),
 			}
 
 			updated, err := s.client.UpdateLicense(ctx, license)

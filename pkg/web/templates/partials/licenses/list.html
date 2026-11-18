@@ -1,0 +1,80 @@
+{{- with .Licenses -}}
+<div class="card" id="licenseList"
+  data-list='{"valueNames": ["item-name", "item-email", "item-syncs", "item-downloads", "item-last-access", "item-expires"], "page": 25, "pagination": {"paginationClass": "list-pagination"}}'>
+  <div class="card-header">
+    <div class="row align-items-center">
+      <div class="col">
+        {{ template "tableSearch" . }}
+      </div>
+      <div class="col-auto me-n3">
+        {{ template "tablePageSize" . }}
+      </div>
+      <div class="col-auto">
+        <!-- Filter Form -->
+        <div class="dropdown">
+          <button class="btn btn-sm btn-white" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+            aria-haspopup="true" aria-expanded="false">
+            <i class="fe fe-sliders me-1"></i> Filter <span class="badge bg-secondary ms-1">0</span>
+          </button>
+          <form class="dropdown-menu dropdown-menu-end dropdown-menu-card">
+            <div class="card-header">
+              <h4 class="card-header-title">Filters</h4>
+              <button class="btn btn-sm btn-link text-reset" type="reset">
+                <small>Clear filters</small>
+              </button>
+            </div>
+            <div class="card-body">
+              <p><small>Licenses filtering is coming soon!</small></p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover table-nowrap card-table">
+      <thead>
+        <tr>
+          <th>
+            <a class="list-sort text-muted" data-sort="item-name" href="#">Name</a>
+          </th>
+          <th>
+            <a class="list-sort text-muted" data-sort="item-email" href="#">Email</a>
+          </th>
+          <th>
+            <a class="list-sort text-muted" data-sort="item-syncs" href="#">Syncs</a>
+          </th>
+          <th>
+            <a class="list-sort text-muted" data-sort="item-downloads" href="#">Downloads</a>
+          </th>
+          <th>
+            <a class="list-sort text-muted" data-sort="item-last-access" href="#">Last Access</a>
+          </th>
+          <th>
+            <a class="list-sort text-muted" data-sort="item-expires" href="#">Expires</a>
+          </th>
+        </tr>
+      </thead>
+      <tbody class="list fs-base">
+        {{ range . }}
+        <tr>
+          <td><span class="item-name"><a href="/licenses/{{ .ID }}">{{ .Name }}</a></span></td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{- else }}
+<div class="card card-inactive">
+  <div class="card-body text-center">
+    <div class="py-6">
+      <img src="/static/img/illustrations/scale.svg" alt="..." class="img-fluid" style="max-width: 182px;">
+      <h1>No entries yet.</h1>
+      <p class="text-muted">
+        No licenses have been added yet; create a few to sync Envoy nodes.
+      </p>
+    </div>
+  </div>
+</div>
+{{- end -}}

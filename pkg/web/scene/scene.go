@@ -108,3 +108,30 @@ func (s Scene) Contacts() []*api.Contact {
 	}
 	return nil
 }
+
+func (s Scene) Contact() *api.Contact {
+	if data, ok := s[APIData]; ok {
+		if out, ok := data.(*api.Contact); ok {
+			return out
+		}
+	}
+	return nil
+}
+
+func (s Scene) Licenses() []*api.License {
+	if data, ok := s[APIData]; ok {
+		if out, ok := data.([]*api.License); ok {
+			return out
+		}
+	}
+	return nil
+}
+
+func (s Scene) License() *api.License {
+	if data, ok := s[APIData]; ok {
+		if out, ok := data.(*api.License); ok {
+			return out
+		}
+	}
+	return nil
+}

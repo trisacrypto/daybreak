@@ -10,6 +10,60 @@
         <form id="createLicenseForm" hx-post="/v1/licenses" hx-ext="form-json" hx-swap="none"
           hx-disabled-elt="#createBtn">
           <div id="createLicenseAlerts"></div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="licenseName">Name</label>
+                <small class="form-text text-body-secondary">Name of licensee (person or company)</small>
+                <input type="text" class="form-control" id="licenseName" name="name" placeholder="Acme Company, LTD"
+                  required>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="licenseEmail">Email</label>
+                <small class="form-text text-body-secondary">Email address of licensee</small>
+                <input type="email" class="form-control" id="licenseEmail" name="email" placeholder="user@example.com"
+                  required>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="licensePermissions">Permissions</label>
+                <small class="form-text text-body-secondary">Permissions granted to licensee.</small>
+                <select class="form-select" id="licensePermissions" name="permissions" multiple required>
+                  <option value="counterparties:admin">counterparties:admin</option>
+                  <option value="counterparties:create" selected>counterparties:create</option>
+                  <option value="daybreak:sync" selected>daybreak:sync</option>
+                  <option value="daybreak:download" selected>daybreak:download</option>
+                  <option value="licenses:admin">licenses:admin</option>
+                </select>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label mb-0" for="licenseExpires">Expires</label>
+                <small class="form-text text-body-secondary">Date and time when license expires.</small>
+                <input type="date" class="form-control" id="licenseExpires" name="expires" value="{{ nextyear }}" required data-flatpickr>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-12">
+              <div class="form-group">
+                <label class="form-label mb-0" for="licenseDescription">Description</label>
+                <small class="form-text text-body-secondary">Brief description of license usage (optional).</small>
+                <textarea class="form-control" id="licenseDescription" name="description" rows="2"></textarea>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
       <div class="modal-footer">

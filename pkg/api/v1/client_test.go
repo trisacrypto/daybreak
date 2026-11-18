@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
+	"github.com/trisacrypto/daybreak/pkg/db/fields"
 	"github.com/trisacrypto/daybreak/pkg/errors"
 	"go.rtnl.ai/ulid"
 )
@@ -937,7 +938,7 @@ func licenseFixtures() []*api.License {
 			Syncs:       412,
 			Downloads:   9,
 			LastAccess:  &stewardsAccess,
-			Expires:     time.Date(2030, 2, 13, 0, 0, 0, 0, time.UTC),
+			Expires:     api.Expiration(fields.Time(time.Date(2030, 2, 13, 0, 0, 0, 0, time.UTC))),
 			Created:     time.Date(2024, 2, 13, 15, 42, 8, 0, time.UTC),
 			Modified:    time.Date(2026, 10, 29, 9, 14, 52, 0, time.UTC),
 		},
@@ -950,7 +951,7 @@ func licenseFixtures() []*api.License {
 			Syncs:       187,
 			Downloads:   4,
 			LastAccess:  &solheimAccess,
-			Expires:     time.Date(2029, 6, 3, 0, 0, 0, 0, time.UTC),
+			Expires:     api.Expiration(fields.Time(time.Date(2029, 6, 3, 0, 0, 0, 0, time.UTC))),
 			Created:     time.Date(2024, 6, 3, 8, 21, 47, 0, time.UTC),
 			Modified:    time.Date(2026, 11, 2, 22, 5, 31, 0, time.UTC),
 		},
@@ -960,7 +961,7 @@ func licenseFixtures() []*api.License {
 			Name:        "Mateus Carvalho",
 			Email:       "mateus.carvalho@ventoforte.com.br",
 			Permissions: []string{"daybreak:sync", "daybreak:download"},
-			Expires:     time.Date(2031, 4, 15, 0, 0, 0, 0, time.UTC),
+			Expires:     api.Expiration(fields.Time(time.Date(2031, 4, 15, 0, 0, 0, 0, time.UTC))),
 			Created:     time.Date(2026, 4, 15, 17, 27, 13, 0, time.UTC),
 			Modified:    time.Date(2026, 4, 15, 17, 27, 13, 0, time.UTC),
 		},
@@ -1043,7 +1044,7 @@ func TestClient_CreateLicense(t *testing.T) {
 		})
 
 		in := fixture.Clone()
-		in.Expires = time.Time{}
+		in.Expires = api.ExpirationDate{}
 		reply, err := client.CreateLicense(context.Background(), in)
 		require.NoError(t, err)
 		require.Equal(t, in, received, "request body should match the input")

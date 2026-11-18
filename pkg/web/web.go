@@ -160,6 +160,7 @@ func (r *Render) AddPattern(fsys fs.FS, pattern string, includes ...string) (err
 
 // Create functions available to templates.
 func (r *Render) FuncMap() template.FuncMap {
+	//cSpell:ignore commaf
 	if r.funcs == nil {
 		r.funcs = template.FuncMap{
 			"camel":        camel,
@@ -175,6 +176,7 @@ func (r *Render) FuncMap() template.FuncMap {
 			"isNil":        isNil,
 			"join":         join,
 			"lowercase":    lowercase,
+			"nextyear":     nextyear,
 			"moment":       humanize.Time,
 			"prettifyJSON": prettifyJSON,
 			"rfc3339":      rfc3339,
@@ -307,4 +309,8 @@ func prettifyJSON(v json.RawMessage) string {
 		return buf.String()
 	}
 	return ""
+}
+
+func nextyear() string {
+	return time.Now().AddDate(1, 0, 0).Format("2006-01-02")
 }
