@@ -9,6 +9,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 # Cancel earlier runs of this workflow on the same PR when a new commit is pushed.
 # Pushes to main/tags keep all runs (cancel-in-progress only fires for pull_request events).
 concurrency:
