@@ -64,9 +64,9 @@ func (s *Suite) TestLicenseResource() {
 			}
 
 			// A license without an expiration expires one year from now, on the hour.
-			earliest := time.Now().UTC().AddDate(1, 0, 0).Truncate(time.Hour)
+			earliest := time.Now().UTC().AddDate(1, 0, 0).AddDate(0, 0, -1).Truncate(time.Hour)
 			created, err := s.client.CreateLicense(ctx, license)
-			latest := time.Now().UTC().AddDate(1, 0, 0).Truncate(time.Hour)
+			latest := time.Now().UTC().AddDate(1, 0, 1).Truncate(time.Hour)
 			require.NoError(err, "could not create license")
 
 			require.Equal("Oskar Nyberg", created.Name, "name should be trimmed")

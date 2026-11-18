@@ -155,6 +155,22 @@ func (l *License) Clone() *License {
 	}
 }
 
+func (l *License) ExpirationStatusClass() string {
+	if l.Expires.IsZero() {
+		return "text-muted"
+	}
+
+	if l.Expires.Before(time.Now().UTC()) {
+		return "text-danger"
+	}
+
+	if l.Expires.Before(time.Now().UTC().AddDate(0, 0, 60)) {
+		return "text-warning"
+	}
+
+	return ""
+}
+
 //============================================================================
 // Expires Timestamp
 //============================================================================
