@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/trisacrypto/daybreak/pkg"
+	"go.rtnl.ai/ulid"
 )
 
 func New(endpoint string, opts ...Option) (_ Client, err error) {
@@ -203,6 +204,63 @@ func (c *APIv1) UpdateContact(ctx context.Context, in *Contact) (out *Contact, e
 
 func (c *APIv1) DeleteContact(ctx context.Context, id uuid.UUID) (err error) {
 	ep := fmt.Sprintf("%s/%s", contactsEP, id)
+	if err = c.Delete(ctx, ep); err != nil {
+		return err
+	}
+	return nil
+}
+
+//============================================================================
+// Licenses Resource
+//============================================================================
+
+const (
+	licensesEP = "/v1/licenses"
+)
+
+func (c *APIv1) ListLicenses(ctx context.Context) (out []*License, err error) {
+	out = make([]*License, 0)
+	if err = c.List(ctx, licensesEP, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *APIv1) CreateLicense(ctx context.Context, in *License) (out *License, err error) {
+	if err = c.Create(ctx, licensesEP, in, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *APIv1) RetrieveLicense(ctx context.Context, id ulid.ULID) (out *License, err error) {
+	ep := fmt.Sprintf("%s/%s", licensesEP, id)
+	if err = c.Retrieve(ctx, ep, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *APIv1) LicenseCredentials(ctx context.Context, id ulid.ULID) (out *LicenseCredentials, err error) {
+	ep := fmt.Sprintf("%s/%s/credentials", licensesEP, id)
+	if err = c.Retrieve(ctx, ep, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *APIv1) UpdateLicense(ctx context.Context, in *License) (out *License, err error) {
+	ep := fmt.Sprintf("%s/%s", licensesEP, in.ID)
+
+	// Ensure read-only fields are cleared
+	if err = c.Update(ctx, ep, in.Clone(), &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *APIv1) DeleteLicense(ctx context.Context, id ulid.ULID) (err error) {
+	ep := fmt.Sprintf("%s/%s", licensesEP, id)
 	if err = c.Delete(ctx, ep); err != nil {
 		return err
 	}

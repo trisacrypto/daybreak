@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
 	"github.com/trisacrypto/daybreak/pkg/errors"
+	"go.rtnl.ai/ulid"
 )
 
 //============================================================================
@@ -907,6 +908,421 @@ func TestClient_DeleteContact(t *testing.T) {
 		})
 
 		err := client.DeleteContact(context.Background(), fixture.ID)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusInternalServerError, err.(*api.StatusError).Code)
+		require.Equal(t, "Internal Server Error", err.(*api.StatusError).Reply.Error)
+	})
+}
+
+//============================================================================
+// Test Licenses
+//============================================================================
+
+// licenseFixtures returns a fresh copy of the licenses used across the client
+// tests so that individual tests can safely modify them.
+func licenseFixtures() []*api.License {
+	//cSpell: ignore Solheim Fjordbit Mateus Carvalho ventoforte meridianrule
+	//cSpell: disable
+	stewardsAccess := time.Date(2026, 10, 29, 9, 14, 52, 0, time.UTC)
+	solheimAccess := time.Date(2026, 11, 2, 22, 5, 31, 0, time.UTC)
+
+	return []*api.License{
+		{
+			ID:          ulid.MustParse("01HPHJ3XDXWD3ZPPF9NH4GPHD8"),
+			Name:        "Daybreak Data Stewards",
+			Email:       "stewards@meridianrule.io",
+			Description: "Internal license for counterparty data administration and dataset maintenance.",
+			Permissions: []string{"counterparties:admin", "daybreak:sync", "daybreak:download"},
+			Syncs:       412,
+			Downloads:   9,
+			LastAccess:  &stewardsAccess,
+			Expires:     time.Date(2030, 2, 13, 0, 0, 0, 0, time.UTC),
+			Created:     time.Date(2024, 2, 13, 15, 42, 8, 0, time.UTC),
+			Modified:    time.Date(2026, 10, 29, 9, 14, 52, 0, time.UTC),
+		},
+		{
+			ID:          ulid.MustParse("01HZEK1D81YCXPPSM5YY0GXDYF"),
+			Name:        "Ingrid Solheim",
+			Email:       "ingrid.solheim@fjordbit.no",
+			Description: "Production Envoy node for Fjordbit Exchange AS.",
+			Permissions: []string{"daybreak:sync", "daybreak:download"},
+			Syncs:       187,
+			Downloads:   4,
+			LastAccess:  &solheimAccess,
+			Expires:     time.Date(2029, 6, 3, 0, 0, 0, 0, time.UTC),
+			Created:     time.Date(2024, 6, 3, 8, 21, 47, 0, time.UTC),
+			Modified:    time.Date(2026, 11, 2, 22, 5, 31, 0, time.UTC),
+		},
+		{
+			// A newly issued license that has never been used: no description or last access.
+			ID:          ulid.MustParse("01KP92XK5JC7NE4HV4PZ61RK37"),
+			Name:        "Mateus Carvalho",
+			Email:       "mateus.carvalho@ventoforte.com.br",
+			Permissions: []string{"daybreak:sync", "daybreak:download"},
+			Expires:     time.Date(2031, 4, 15, 0, 0, 0, 0, time.UTC),
+			Created:     time.Date(2026, 4, 15, 17, 27, 13, 0, time.UTC),
+			Modified:    time.Date(2026, 4, 15, 17, 27, 13, 0, time.UTC),
+		},
+	}
+	//cSpell: enable
+}
+
+func TestClient_ListLicenses(t *testing.T) {
+	fixture := licenseFixtures()
+
+	t.Run("Ok", func(t *testing.T) {
+		client := Serve(t, http.MethodGet, "/v1/licenses", func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusOK, fixture)
+			return nil
+		})
+
+		reply, err := client.ListLicenses(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, fixture, reply)
+		require.Nil(t, reply[2].LastAccess, "expected a null last access to be deserialized as nil")
+	})
+
+	t.Run("Empty", func(t *testing.T) {
+		client := Serve(t, http.MethodGet, "/v1/licenses", func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusOK, []*api.License{})
+			return nil
+		})
+
+		reply, err := client.ListLicenses(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, []*api.License{}, reply)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		client := Serve(t, http.MethodGet, "/v1/licenses", func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusInternalServerError, &api.Reply{Error: "Internal Server Error"})
+			return nil
+		})
+
+		reply, err := client.ListLicenses(context.Background())
+		require.Nil(t, reply)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusInternalServerError, err.(*api.StatusError).Code)
+		require.Equal(t, "Internal Server Error", err.(*api.StatusError).Reply.Error)
+	})
+}
+
+func TestClient_CreateLicense(t *testing.T) {
+	fixture := licenseFixtures()[0]
+
+	t.Run("Ok", func(t *testing.T) {
+		var received *api.License
+		client := Serve(t, http.MethodPost, "/v1/licenses", func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			received = &api.License{}
+			if err := json.NewDecoder(r.Body).Decode(received); err != nil {
+				return api.Error(http.StatusBadRequest, err, "")
+			}
+			WriteJSON(w, http.StatusCreated, fixture)
+			return nil
+		})
+
+		in := fixture.Clone()
+		reply, err := client.CreateLicense(context.Background(), in)
+		require.NoError(t, err)
+		require.Equal(t, in, received, "request body should match the input")
+		require.Equal(t, fixture, reply)
+	})
+
+	t.Run("NoExpires", func(t *testing.T) {
+		// The expiration is optional on create: the server assigns a default.
+		var received *api.License
+		client := Serve(t, http.MethodPost, "/v1/licenses", func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			received = &api.License{}
+			if err := json.NewDecoder(r.Body).Decode(received); err != nil {
+				return api.Error(http.StatusBadRequest, err, "")
+			}
+			WriteJSON(w, http.StatusCreated, fixture)
+			return nil
+		})
+
+		in := fixture.Clone()
+		in.Expires = time.Time{}
+		reply, err := client.CreateLicense(context.Background(), in)
+		require.NoError(t, err)
+		require.Equal(t, in, received, "request body should match the input")
+		require.True(t, received.Expires.IsZero(), "expected expires to be omitted from the request")
+		require.Equal(t, fixture, reply)
+	})
+
+	t.Run("ValidationError", func(t *testing.T) {
+		client := Serve(t, http.MethodPost, "/v1/licenses", func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusBadRequest, &api.Reply{Error: "missing email: this field is required"})
+			return nil
+		})
+
+		in := fixture.Clone()
+		in.Email = ""
+		reply, err := client.CreateLicense(context.Background(), in)
+		require.Nil(t, reply)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusBadRequest, err.(*api.StatusError).Code)
+		require.Equal(t, "missing email: this field is required", err.(*api.StatusError).Reply.Error)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		client := Serve(t, http.MethodPost, "/v1/licenses", func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusInternalServerError, &api.Reply{Error: "Internal Server Error"})
+			return nil
+		})
+
+		reply, err := client.CreateLicense(context.Background(), fixture.Clone())
+		require.Nil(t, reply)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusInternalServerError, err.(*api.StatusError).Code)
+		require.Equal(t, "Internal Server Error", err.(*api.StatusError).Reply.Error)
+	})
+}
+
+func TestClient_RetrieveLicense(t *testing.T) {
+	fixture := licenseFixtures()[1]
+	path := "/v1/licenses/" + fixture.ID.String()
+
+	t.Run("Ok", func(t *testing.T) {
+		client := Serve(t, http.MethodGet, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusOK, fixture)
+			return nil
+		})
+
+		reply, err := client.RetrieveLicense(context.Background(), fixture.ID)
+		require.NoError(t, err)
+		require.Equal(t, fixture, reply)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		client := Serve(t, http.MethodGet, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusNotFound, &api.NotFound)
+			return nil
+		})
+
+		reply, err := client.RetrieveLicense(context.Background(), fixture.ID)
+		require.Nil(t, reply)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusNotFound, err.(*api.StatusError).Code)
+		require.Equal(t, api.NotFound.Error, err.(*api.StatusError).Reply.Error)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		client := Serve(t, http.MethodGet, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusInternalServerError, &api.Reply{Error: "Internal Server Error"})
+			return nil
+		})
+
+		reply, err := client.RetrieveLicense(context.Background(), fixture.ID)
+		require.Nil(t, reply)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusInternalServerError, err.(*api.StatusError).Code)
+		require.Equal(t, "Internal Server Error", err.(*api.StatusError).Reply.Error)
+	})
+}
+
+func TestClient_LicenseCredentials(t *testing.T) {
+	license := licenseFixtures()[1]
+	path := "/v1/licenses/" + license.ID.String() + "/credentials"
+
+	fixture := &api.LicenseCredentials{
+		ClientID:     license.ID.String(),
+		ClientSecret: "/jo2gHc76tLTB7o7Nbuo56HElrBNdXAzNy86ZctpfOA=",
+	}
+
+	t.Run("Ok", func(t *testing.T) {
+		client := Serve(t, http.MethodGet, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusOK, fixture)
+			return nil
+		})
+
+		reply, err := client.LicenseCredentials(context.Background(), license.ID)
+		require.NoError(t, err)
+		require.Equal(t, fixture, reply)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		client := Serve(t, http.MethodGet, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusNotFound, &api.NotFound)
+			return nil
+		})
+
+		reply, err := client.LicenseCredentials(context.Background(), license.ID)
+		require.Nil(t, reply)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusNotFound, err.(*api.StatusError).Code)
+		require.Equal(t, api.NotFound.Error, err.(*api.StatusError).Reply.Error)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		client := Serve(t, http.MethodGet, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusInternalServerError, &api.Reply{Error: "Internal Server Error"})
+			return nil
+		})
+
+		reply, err := client.LicenseCredentials(context.Background(), license.ID)
+		require.Nil(t, reply)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusInternalServerError, err.(*api.StatusError).Code)
+		require.Equal(t, "Internal Server Error", err.(*api.StatusError).Reply.Error)
+	})
+}
+
+func TestClient_UpdateLicense(t *testing.T) {
+	fixture := licenseFixtures()[0]
+	path := "/v1/licenses/" + fixture.ID.String()
+
+	t.Run("Ok", func(t *testing.T) {
+		var received *api.License
+		client := Serve(t, http.MethodPut, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			received = &api.License{}
+			if err := json.NewDecoder(r.Body).Decode(received); err != nil {
+				return api.Error(http.StatusBadRequest, err, "")
+			}
+
+			// Validate the request body; fails if any read-only field was sent.
+			if err := received.Validate(http.MethodPut); err != nil {
+				return api.Error(http.StatusBadRequest, err, "")
+			}
+
+			out := *received
+			out.ID = fixture.ID
+			out.Syncs = fixture.Syncs
+			out.Downloads = fixture.Downloads
+			out.LastAccess = fixture.LastAccess
+			out.Created = fixture.Created
+			out.Modified = fixture.Modified
+
+			WriteJSON(w, http.StatusOK, &out)
+			return nil
+		})
+
+		// The ID is required on the input so the client can resolve the endpoint, but
+		// the client strips it (and the other read-only fields) from the request body.
+		in := *fixture
+		in.Description = "Internal license for the data stewardship team."
+		in.Permissions = []string{"counterparties:admin", "counterparties:create", "daybreak:sync", "daybreak:download"}
+
+		reply, err := client.UpdateLicense(context.Background(), &in)
+		require.NoError(t, err)
+		require.Equal(t, in.Clone(), received, "request body should not include read-only fields")
+
+		// The reply should show the updated values
+		require.NotEqual(t, fixture, reply, "reply should show the updated values")
+		require.Equal(t, fixture.ID, reply.ID, "id should be the same")
+		require.Equal(t, fixture.Name, reply.Name, "name should be the same")
+		require.Equal(t, fixture.Email, reply.Email, "email should be the same")
+		require.Equal(t, fixture.Syncs, reply.Syncs, "syncs should be the same")
+		require.Equal(t, fixture.Downloads, reply.Downloads, "downloads should be the same")
+		require.Equal(t, fixture.LastAccess, reply.LastAccess, "last access should be the same")
+		require.Equal(t, fixture.Expires, reply.Expires, "expires should be the same")
+		require.Equal(t, fixture.Created, reply.Created, "created should be the same")
+
+		require.Equal(t, in.Description, reply.Description, "description should be the updated value")
+		require.Equal(t, in.Permissions, reply.Permissions, "permissions should be the updated value")
+	})
+
+	t.Run("ValidationError", func(t *testing.T) {
+		detail := api.ErrorDetail{
+			{Field: "name", Error: "missing name: this field is required"},
+			{Field: "permissions[0]", Error: `invalid permissions[0]: "foo" is not a valid permission`},
+		}
+
+		client := Serve(t, http.MethodPut, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusBadRequest, &api.Reply{Error: "2 validation errors occurred", ErrorDetail: detail})
+			return nil
+		})
+
+		in := fixture.Clone()
+		in.ID = fixture.ID
+		in.Name = ""
+		in.Permissions = []string{"foo"}
+
+		reply, err := client.UpdateLicense(context.Background(), in)
+		require.Nil(t, reply)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusBadRequest, err.(*api.StatusError).Code)
+		require.Equal(t, "2 validation errors occurred", err.(*api.StatusError).Reply.Error)
+		require.Equal(t, detail, err.(*api.StatusError).Reply.ErrorDetail)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		client := Serve(t, http.MethodPut, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusNotFound, &api.NotFound)
+			return nil
+		})
+
+		in := fixture.Clone()
+		in.ID = fixture.ID
+
+		reply, err := client.UpdateLicense(context.Background(), in)
+		require.Nil(t, reply)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusNotFound, err.(*api.StatusError).Code)
+		require.Equal(t, api.NotFound.Error, err.(*api.StatusError).Reply.Error)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		client := Serve(t, http.MethodPut, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusInternalServerError, &api.Reply{Error: "Internal Server Error"})
+			return nil
+		})
+
+		in := fixture.Clone()
+		in.ID = fixture.ID
+
+		reply, err := client.UpdateLicense(context.Background(), in)
+		require.Nil(t, reply)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusInternalServerError, err.(*api.StatusError).Code)
+		require.Equal(t, "Internal Server Error", err.(*api.StatusError).Reply.Error)
+	})
+}
+
+func TestClient_DeleteLicense(t *testing.T) {
+	fixture := licenseFixtures()[2]
+	path := "/v1/licenses/" + fixture.ID.String()
+
+	t.Run("Ok", func(t *testing.T) {
+		client := Serve(t, http.MethodDelete, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			w.WriteHeader(http.StatusNoContent)
+			return nil
+		})
+
+		err := client.DeleteLicense(context.Background(), fixture.ID)
+		require.NoError(t, err)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		client := Serve(t, http.MethodDelete, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusNotFound, &api.NotFound)
+			return nil
+		})
+
+		err := client.DeleteLicense(context.Background(), fixture.ID)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusNotFound, err.(*api.StatusError).Code)
+		require.Equal(t, api.NotFound.Error, err.(*api.StatusError).Reply.Error)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		client := Serve(t, http.MethodDelete, path, func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusInternalServerError, &api.Reply{Error: "Internal Server Error"})
+			return nil
+		})
+
+		err := client.DeleteLicense(context.Background(), fixture.ID)
 		require.Error(t, err)
 		require.IsType(t, &api.StatusError{}, err)
 		require.Equal(t, http.StatusInternalServerError, err.(*api.StatusError).Code)
