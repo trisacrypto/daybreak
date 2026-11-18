@@ -120,6 +120,14 @@ func (s *Server) setupRoutes() (err error) {
 		v1a.PUT("/contacts/:id", Wrap("api.contacts.update", s.UpdateContact))
 		v1a.DELETE("/contacts/:id", Wrap("api.contacts.delete", s.DeleteContact))
 
+		// Licenses Resource
+		v1a.GET("/licenses", Wrap("api.licenses.list", s.ListLicenses))
+		v1a.POST("/licenses", Wrap("api.licenses.create", s.CreateLicense))
+		v1a.GET("/licenses/:id", Wrap("api.licenses.retrieve", s.RetrieveLicense))
+		v1a.GET("/licenses/:id/credentials", Wrap("api.licenses.credentials", s.LicenseCredentials))
+		v1a.PUT("/licenses/:id", Wrap("api.licenses.update", s.UpdateLicense))
+		v1a.DELETE("/licenses/:id", Wrap("api.licenses.delete", s.DeleteLicense))
+
 		// Informational endpoints and statistics
 		v1a.GET("/countries", Wrap("api.countries.counts", s.CountryCounts))
 
