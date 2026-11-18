@@ -81,6 +81,11 @@ func (tx *Tx) CreateContact(contact *Contact) (err error) {
 	if _, err = tx.Exec(createContactSQL, params...); err != nil {
 		return err
 	}
+
+	// When contacts are created, update the modified timestamp for the company and the database.
+	if err = tx.CompanyModified(contact.CompanyID, contact.Modified); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -121,12 +126,25 @@ func (tx *Tx) UpdateContact(contact *Contact) (err error) {
 		}
 		return errors.ErrNotFound
 	}
+
+	// When contacts are created, update the modified timestamp for the company and the database.
+	if err = tx.CompanyModified(contact.CompanyID, contact.Modified); err != nil {
+		return err
+	}
 	return nil
 }
 
-const deleteContactSQL = `DELETE FROM contacts WHERE id=:id;`
+const (
+	deleteContactSQL         = `DELETE FROM contacts WHERE id=:id;`
+	deletedContactCompanySQL = `SELECT company_id FROM contacts WHERE id=:id;`
+)
 
 func (tx *Tx) DeleteContact(id uuid.UUID) (err error) {
+	var companyID uuid.UUID
+	if err = tx.QueryRow(deletedContactCompanySQL, sql.Named("id", id)).Scan(&companyID); err != nil {
+		return err
+	}
+
 	var result sql.Result
 	if result, err = tx.Exec(deleteContactSQL, sql.Named("id", id)); err != nil {
 		return err
@@ -137,6 +155,11 @@ func (tx *Tx) DeleteContact(id uuid.UUID) (err error) {
 			return err
 		}
 		return errors.ErrNotFound
+	}
+
+	// When contacts are created, update the modified timestamp for the company and the database.
+	if err = tx.CompanyModified(companyID, fields.TimeNow()); err != nil {
+		return err
 	}
 	return nil
 }

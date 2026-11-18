@@ -3,7 +3,6 @@
 -- using the UUID string value rather than a 16-byte blob to make database queries
 -- easier and because the sqlite3 storage backend isn't performance sensitive.
 
-
 CREATE TABLE IF NOT EXISTS companies (
     id                  TEXT PRIMARY KEY,
     lei                 TEXT DEFAULT NULL,
