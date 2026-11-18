@@ -23,6 +23,12 @@ type Client interface {
 	RetrieveContact(context.Context, uuid.UUID) (*Contact, error)
 	UpdateContact(context.Context, *Contact) (*Contact, error)
 	DeleteContact(context.Context, uuid.UUID) error
+	ListLicenses(context.Context) ([]*License, error)
+	CreateLicense(context.Context, *License) (*License, error)
+	RetrieveLicense(context.Context, ulid.ULID) (*License, error)
+	LicenseCredentials(context.Context, ulid.ULID) (*LicenseCredentials, error)
+	UpdateLicense(context.Context, *License) (*License, error)
+	DeleteLicense(context.Context, ulid.ULID) error
 }
 
 // Reply contains standard fields for generic API replies.

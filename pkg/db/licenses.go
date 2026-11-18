@@ -56,7 +56,7 @@ func (tx *Tx) ListLicenses() (licenses *Iterator[License, *License], err error) 
 	return Iterate[License](rows), nil
 }
 
-const createLicenseSQL = `INSERT INTO licenses (id, secret, name, email, description, permissions, syncs, downloads, last_access, expires, created, modified) VALUES (:id, :secret, :name, :email, :description, :permissions, :syncs, :downloads, :last_access, :expires, :created, :modified);`
+const createLicenseSQL = `INSERT INTO licenses (id, secret, name, email, description, permissions, expires, created, modified) VALUES (:id, :secret, :name, :email, :description, :permissions, :expires, :created, :modified);`
 
 func (tx *Tx) CreateLicense(license *License) (err error) {
 	if len(license.Secret) != 32 {
@@ -84,9 +84,6 @@ func (tx *Tx) CreateLicense(license *License) (err error) {
 		{Name: "email", Value: license.Email},
 		{Name: "description", Value: license.Description},
 		{Name: "permissions", Value: license.Permissions},
-		{Name: "syncs", Value: license.Syncs},
-		{Name: "downloads", Value: license.Downloads},
-		{Name: "last_access", Value: license.LastAccess},
 		{Name: "expires", Value: license.Expires},
 		{Name: "created", Value: license.Created},
 		{Name: "modified", Value: license.Modified},
@@ -109,7 +106,7 @@ func (tx *Tx) RetrieveLicense(id ulid.ULID) (license *License, err error) {
 	return license, nil
 }
 
-const updateLicenseSQL = `UPDATE licenses SET name=:name, email=:email, description=:description, permissions=:permissions, syncs=:syncs, downloads=:downloads, last_access=:last_access, expires=:expires, modified=:modified WHERE id=:id;`
+const updateLicenseSQL = `UPDATE licenses SET name=:name, email=:email, description=:description, permissions=:permissions, expires=:expires, modified=:modified WHERE id=:id;`
 
 func (tx *Tx) UpdateLicense(license *License) (err error) {
 	license.Modified = fields.TimeNow()
@@ -120,9 +117,6 @@ func (tx *Tx) UpdateLicense(license *License) (err error) {
 		{Name: "email", Value: license.Email},
 		{Name: "description", Value: license.Description},
 		{Name: "permissions", Value: license.Permissions},
-		{Name: "syncs", Value: license.Syncs},
-		{Name: "downloads", Value: license.Downloads},
-		{Name: "last_access", Value: license.LastAccess},
 		{Name: "expires", Value: license.Expires},
 		{Name: "modified", Value: license.Modified},
 	}
@@ -139,6 +133,75 @@ func (tx *Tx) UpdateLicense(license *License) (err error) {
 		return errors.ErrNotFound
 	}
 
+	return nil
+}
+
+const licenseAccessedSQL = `UPDATE licenses SET last_access=:last_access, modified=:modified WHERE id=:id;`
+
+func (tx *Tx) LicenseAccessed(id ulid.ULID) (err error) {
+	now := fields.TimeNow()
+	params := []sql.NamedArg{
+		{Name: "id", Value: id},
+		{Name: "last_access", Value: now},
+		{Name: "modified", Value: now},
+	}
+
+	var result sql.Result
+	if result, err = tx.Exec(licenseAccessedSQL, params...); err != nil {
+		return err
+	}
+
+	if rowsAffected, err := result.RowsAffected(); err != nil || rowsAffected == 0 {
+		if err != nil {
+			return err
+		}
+		return errors.ErrNotFound
+	}
+
+	return nil
+}
+
+const incrementLicenseSyncsSQL = `UPDATE licenses SET syncs=syncs+1, modified=:modified WHERE id=:id;`
+
+func (tx *Tx) IncrementLicenseSyncs(id ulid.ULID) (err error) {
+	params := []sql.NamedArg{
+		{Name: "id", Value: id},
+		{Name: "modified", Value: fields.TimeNow()},
+	}
+
+	var result sql.Result
+	if result, err = tx.Exec(incrementLicenseSyncsSQL, params...); err != nil {
+		return err
+	}
+
+	if rowsAffected, err := result.RowsAffected(); err != nil || rowsAffected == 0 {
+		if err != nil {
+			return err
+		}
+		return errors.ErrNotFound
+	}
+	return nil
+}
+
+const incrementLicenseDownloadsSQL = `UPDATE licenses SET downloads=downloads+1, modified=:modified WHERE id=:id;`
+
+func (tx *Tx) IncrementLicenseDownloads(id ulid.ULID) (err error) {
+	params := []sql.NamedArg{
+		{Name: "id", Value: id},
+		{Name: "modified", Value: fields.TimeNow()},
+	}
+
+	var result sql.Result
+	if result, err = tx.Exec(incrementLicenseDownloadsSQL, params...); err != nil {
+		return err
+	}
+
+	if rowsAffected, err := result.RowsAffected(); err != nil || rowsAffected == 0 {
+		if err != nil {
+			return err
+		}
+		return errors.ErrNotFound
+	}
 	return nil
 }
 
@@ -215,6 +278,48 @@ func (db *DB) UpdateLicense(ctx context.Context, license *License) (err error) {
 	defer tx.Rollback()
 
 	if err = tx.UpdateLicense(license); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (db *DB) LicenseAccessed(ctx context.Context, id ulid.ULID) (err error) {
+	var tx *Tx
+	if tx, err = db.Begin(ctx, &sql.TxOptions{ReadOnly: false}); err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err = tx.LicenseAccessed(id); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (db *DB) IncrementLicenseSyncs(ctx context.Context, id ulid.ULID) (err error) {
+	var tx *Tx
+	if tx, err = db.Begin(ctx, &sql.TxOptions{ReadOnly: false}); err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err = tx.IncrementLicenseSyncs(id); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (db *DB) IncrementLicenseDownloads(ctx context.Context, id ulid.ULID) (err error) {
+	var tx *Tx
+	if tx, err = db.Begin(ctx, &sql.TxOptions{ReadOnly: false}); err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err = tx.IncrementLicenseDownloads(id); err != nil {
 		return err
 	}
 
