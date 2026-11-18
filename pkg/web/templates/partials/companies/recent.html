@@ -13,7 +13,7 @@
     <tbody class="list">
       {{- range . -}}
       <tr>
-        <td><a href="/companies/{{ .ID }}">{{ .Name }}</a></td>
+        <td class="text-truncate"><a href="/companies/{{ .ID }}">{{ .Name }}</a></td>
         <td>{{ if .Country }}{{ flag .Country }}{{ else }}&mdash;{{ end }}</td>
         <td>{{ titlecase .BusinessCategory }}</td>
         <td>{{ .NumContacts }}</td>

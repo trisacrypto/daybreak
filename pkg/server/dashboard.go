@@ -66,6 +66,21 @@ func (s *Server) DashboardCounterparties(ctx context.Context, c *gin.Context) *e
 
 // HTMX only endpoint that renders a partial of the recent licenses card on the dashboard.
 func (s *Server) DashboardLicenses(ctx context.Context, c *gin.Context) *errors.HTTP {
-	c.HTML(http.StatusOK, "partials/licenses/recent.html", scene.New(c).WithAPIData(nil))
+	var (
+		err      error
+		licenses []*db.License
+		out      []*api.License
+	)
+
+	if licenses, err = s.db.RecentLicenses(ctx, 10); err != nil {
+		return api.Error(http.StatusInternalServerError, err, "could not retrieve recent licenses")
+	}
+
+	out = make([]*api.License, 0, len(licenses))
+	for _, license := range licenses {
+		out = append(out, api.NewLicense(license))
+	}
+
+	c.HTML(http.StatusOK, "partials/licenses/recent.html", scene.New(c).WithAPIData(out))
 	return nil
 }

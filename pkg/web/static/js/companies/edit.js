@@ -44,6 +44,14 @@ if (editCompanyForm) {
       if (pageAlerts) {
         pageAlerts.success('','Company successfully updated.', { dismissible: true, autoClose: true });
       }
+
+      // Scroll to the top of the page.
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "smooth"
+      });
+
       return;
     }
 

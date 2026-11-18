@@ -77,7 +77,7 @@ export function createFlatpickr(elem) {
 export function choicesDefaultOptions(elem) {
   return {
     classNames: {
-      containerInner: elem.className,
+      containerInner: Array.from(elem.classList),
       input: 'form-control',
       inputCloned: 'form-control-sm',
       listDropdown: 'dropdown-menu',

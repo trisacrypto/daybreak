@@ -3,15 +3,17 @@
   <table class="table table-sm table-nowrap card-table">
     <thead>
       <tr>
-        <th>User</th>
+        <th>Owner</th>
+        <th>Description</th>
         <th>Expires</th>
       </tr>
     </thead>
     <tbody class="list">
       {{- range . -}}
       <tr>
-        <td>{{ .User }}</td>
-        <td>{{ .Expires }}</td>
+        <td><a href="/licenses/{{ .ID }}">{{ .Name }}</a></td>
+        <td class="text-truncate">{{ .Description }}</td>
+        <td class="{{ .ExpirationStatusClass }}">{{ .Expires.Format "2006-01-02" }}</td>
       </tr>
       {{- end -}}
     </tbody>
@@ -22,7 +24,8 @@
   <table class="table table-sm table-nowrap card-table">
     <thead>
       <tr>
-        <th>User</th>
+        <th>Owner</th>
+        <th>Description</th>
         <th>Expires</th>
       </tr>
     </thead>

@@ -9,8 +9,8 @@ document.addEventListener("htmx:afterSettle", function(e) {
   if (!e.detail.elt || e.detail.elt.id !== 'licenses') return;
 
   // Initialize List.js
-  const liList = document.getElementById('licenseList');
-  const list = createList(liList);
+  const keyList = document.getElementById('licenseList');
+  const list = createList(keyList);
 
   // Initialize Page Size Select
   const pageSizeSelect = document.getElementById('pageSizeSelect');
@@ -133,6 +133,7 @@ Handle any htmx errors that are not swapped by the htmx config.
 */
 document.body.addEventListener("htmx:responseError", function(e) {
   // Handle errors for delete user by showing a toast alert.
+  // cSpell:ignore HJKMNP
   if (isRequestMatch(e, "/v1/licenses/[0-9A-HJKMNP-TV-Z]{26}", "delete")) {
     let message = `Request failed with status ${e.detail.xhr.status}`;
     try {

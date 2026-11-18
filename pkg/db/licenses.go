@@ -56,6 +56,16 @@ func (tx *Tx) ListLicenses() (licenses *Iterator[License, *License], err error) 
 	return Iterate[License](rows), nil
 }
 
+const recentLicensesSQL = `SELECT * FROM licenses ORDER BY modified DESC LIMIT :limit;`
+
+func (tx *Tx) RecentLicenses(limit int) (licenses *Iterator[License, *License], err error) {
+	var rows *sql.Rows
+	if rows, err = tx.Query(recentLicensesSQL, sql.Named("limit", limit)); err != nil {
+		return nil, err
+	}
+	return Iterate[License](rows), nil
+}
+
 const createLicenseSQL = `INSERT INTO licenses (id, secret, name, email, description, permissions, expires, created, modified) VALUES (:id, :secret, :name, :email, :description, :permissions, :expires, :created, :modified);`
 
 func (tx *Tx) CreateLicense(license *License) (err error) {
@@ -239,6 +249,20 @@ func (db *DB) ListLicenses(ctx context.Context) (licenses []*License, err error)
 		return nil, err
 	}
 
+	return iter.List()
+}
+
+func (db *DB) RecentLicenses(ctx context.Context, limit int) (licenses []*License, err error) {
+	var tx *Tx
+	if tx, err = db.Begin(ctx, &sql.TxOptions{ReadOnly: true}); err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	var iter *Iterator[License, *License]
+	if iter, err = tx.RecentLicenses(limit); err != nil {
+		return nil, err
+	}
 	return iter.List()
 }
 
