@@ -113,6 +113,11 @@ func (tx *Tx) CreateCompany(company *Company) (err error) {
 	if _, err = tx.Exec(createCompanySQL, params...); err != nil {
 		return err
 	}
+
+	// When companies are modified, update the modified timestamp for the database.
+	if err = tx.UpdateModified(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -165,17 +170,23 @@ func (tx *Tx) UpdateCompany(company *Company) (err error) {
 		return errors.ErrNotFound
 	}
 
+	// When companies are modified, update the modified timestamp for the database.
+	if err = tx.UpdateModified(); err != nil {
+		return err
+	}
 	return nil
 }
 
-const verifyCompanySQL = `UPDATE companies SET verified_on=:verifiedOn WHERE id=:id;`
+const verifyCompanySQL = `UPDATE companies SET verified_on=:verifiedOn, modified=:modified WHERE id=:id;`
 
 func (tx *Tx) VerifyCompany(company *Company) (err error) {
 	company.VerifiedOn = fields.TimeNow()
+	company.Modified = company.VerifiedOn
 
 	params := []sql.NamedArg{
 		{Name: "id", Value: company.ID},
 		{Name: "verifiedOn", Value: company.VerifiedOn},
+		{Name: "modified", Value: company.Modified},
 	}
 
 	var result sql.Result
@@ -189,10 +200,18 @@ func (tx *Tx) VerifyCompany(company *Company) (err error) {
 		}
 		return errors.ErrNotFound
 	}
+
+	// When companies are modified, update the modified timestamp for the database.
+	if err = tx.UpdateModified(); err != nil {
+		return err
+	}
 	return nil
 }
 
-const deleteCompanySQL = `DELETE FROM companies WHERE id=:id;`
+const (
+	deleteCompanySQL = `DELETE FROM companies WHERE id=:id;`
+	markDeletedSQL   = `INSERT INTO deleted_companies (id, modified) VALUES (:id, :modified);`
+)
 
 func (tx *Tx) DeleteCompany(id uuid.UUID) (err error) {
 	var result sql.Result
@@ -206,6 +225,43 @@ func (tx *Tx) DeleteCompany(id uuid.UUID) (err error) {
 		}
 		return errors.ErrNotFound
 	}
+
+	if _, err = tx.Exec(markDeletedSQL, sql.Named("id", id), sql.Named("modified", fields.TimeNow())); err != nil {
+		return err
+	}
+
+	// When companies are modified, update the modified timestamp for the database.
+	if err = tx.UpdateModified(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+const companyModifiedSQL = `UPDATE companies SET modified=:modified WHERE id=:id;`
+
+// Called by contacts to indicate that they've been modified and therefore the company
+// has also been modified. This will also update the modified timestamp for the database
+// so that the contacts table can trickle up the update timestamps for caches.
+func (tx *Tx) CompanyModified(id uuid.UUID, modified fields.Timestamp) (err error) {
+	if modified.IsZero() {
+		modified = fields.TimeNow()
+	}
+
+	params := []sql.NamedArg{
+		{Name: "id", Value: id},
+		{Name: "modified", Value: modified},
+	}
+
+	if _, err = tx.Exec(companyModifiedSQL, params...); err != nil {
+		return err
+	}
+
+	// When companies are modified, update the modified timestamp for the database.
+	if err = tx.UpdateModified(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
