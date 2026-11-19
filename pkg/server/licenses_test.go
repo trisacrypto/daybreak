@@ -187,7 +187,7 @@ func (s *Suite) TestLicenseResource() {
 			credentials, err := s.client.LicenseCredentials(ctx, licenseID)
 			require.NoError(err, "could not retrieve license credentials")
 			require.Equal("01JQ8Z5K3N7M2W4X6Y8A0B1C2D", credentials.ClientID, "client ID should be the license ID")
-			require.Equal("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=", credentials.ClientSecret, "client secret should be the base64 encoded license secret")
+			require.Equal("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY", credentials.ClientSecret, "client secret should be the base64 encoded license secret")
 		})
 
 		s.Run("NotFound", func() {
@@ -236,7 +236,7 @@ func (s *Suite) TestLicenseResource() {
 			credentials, err := s.client.LicenseCredentials(ctx, original.ID)
 			require.NoError(err, "could not retrieve license credentials")
 			require.Equal("01JQ8Z5K3N7M2W4X6Y8A0B1C2D", credentials.ClientID, "client ID should be the same")
-			require.Equal("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=", credentials.ClientSecret, "client secret should be the same")
+			require.Equal("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY", credentials.ClientSecret, "client secret should be the same")
 		})
 
 		s.Run("NotFound", func() {

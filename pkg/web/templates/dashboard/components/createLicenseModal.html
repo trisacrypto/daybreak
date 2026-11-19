@@ -33,15 +33,9 @@
           <div class="row">
             <div class="col-md-6">
               <div class="form-group">
-                <label class="form-label mb-0" for="licensePermissions">Permissions</label>
-                <small class="form-text text-body-secondary">Permissions granted to licensee.</small>
-                <select class="form-control" id="licensePermissions" name="permissions" multiple data-choices='{"removeItemButton": true}'>
-                  <option value="counterparties:admin">counterparties:admin</option>
-                  <option value="counterparties:create" selected>counterparties:create</option>
-                  <option value="daybreak:sync" selected>daybreak:sync</option>
-                  <option value="daybreak:download" selected>daybreak:download</option>
-                  <option value="licenses:admin">licenses:admin</option>
-                </select>
+                <label class="form-label mb-0" for="licenseDescription">Description</label>
+                <small class="form-text text-body-secondary">Brief description of license usage (optional).</small>
+                <input type="text" class="form-control" id="licenseDescription" name="description" placeholder="Envoy hosted service license keys" />
                 <div class="invalid-feedback"></div>
               </div>
             </div>
@@ -57,9 +51,16 @@
           <div class="row">
             <div class="col-12">
               <div class="form-group">
-                <label class="form-label mb-0" for="licenseDescription">Description</label>
-                <small class="form-text text-body-secondary">Brief description of license usage (optional).</small>
-                <textarea class="form-control" id="licenseDescription" name="description" rows="2"></textarea>
+                <label class="form-label mb-0" for="licensePermissions">Permissions</label>
+                <small class="form-text text-body-secondary">Permissions granted to licensee.</small>
+                <select class="form-control" id="licensePermissions" name="permissions" multiple
+                  data-choices='{"removeItemButton": true}'>
+                  <option value="counterparties:admin">counterparties:admin</option>
+                  <option value="counterparties:create" selected>counterparties:create</option>
+                  <option value="daybreak:sync" selected>daybreak:sync</option>
+                  <option value="daybreak:download" selected>daybreak:download</option>
+                  <option value="licenses:admin">licenses:admin</option>
+                </select>
                 <div class="invalid-feedback"></div>
               </div>
             </div>
