@@ -135,3 +135,12 @@ func (s Scene) License() *api.License {
 	}
 	return nil
 }
+
+func (s Scene) LicenseCredentials() *api.LicenseCredentials {
+	if data, ok := s[APIData]; ok {
+		if out, ok := data.(*api.LicenseCredentials); ok {
+			return out
+		}
+	}
+	return nil
+}

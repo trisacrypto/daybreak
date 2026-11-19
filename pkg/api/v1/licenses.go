@@ -69,7 +69,7 @@ func NewLicense(model *db.License) *License {
 func NewLicenseCredentials(model *db.License) *LicenseCredentials {
 	return &LicenseCredentials{
 		ClientID:     model.ID.String(),
-		ClientSecret: base64.StdEncoding.EncodeToString(model.Secret),
+		ClientSecret: base64.RawStdEncoding.EncodeToString(model.Secret),
 	}
 }
 

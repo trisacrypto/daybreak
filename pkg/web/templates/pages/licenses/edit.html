@@ -1,0 +1,21 @@
+{{ template "page.html" . }}
+{{- define "title" }}Edit License | Daybreak{{ end }}
+
+{{- define "modals" }}
+{{- end }}
+
+{{- define "page-content" }}
+{{- with .License }}
+<div class="header mt-md-5">
+  <div class="header-body">
+    <!-- Header -->
+    {{ template "licensesHeader" . }}
+
+    <!-- Tabs -->
+    {{ template "licensesTabs" dict "Page" $.Page "ID" .ID }}
+  </div>
+</div>
+
+
+{{- end }}
+{{- end }}
