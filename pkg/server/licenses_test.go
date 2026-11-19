@@ -36,7 +36,7 @@ func (s *Suite) TestLicenseResource() {
 				Email:       "annika.lindqvist@norrskenpay.se",
 				Description: "Production Envoy node for Norrsken Pay AB.",
 				Permissions: []string{"daybreak:sync", "daybreak:download"},
-				Expires:     time.Date(2030, time.January, 1, 0, 0, 0, 0, time.UTC),
+				Expires:     api.Expiration(fields.Time(time.Date(2030, time.January, 1, 0, 0, 0, 0, time.UTC))),
 			}
 
 			created, err := s.client.CreateLicense(ctx, license)
@@ -64,9 +64,9 @@ func (s *Suite) TestLicenseResource() {
 			}
 
 			// A license without an expiration expires one year from now, on the hour.
-			earliest := time.Now().UTC().AddDate(1, 0, 0).Truncate(time.Hour)
+			earliest := time.Now().UTC().AddDate(1, 0, 0).AddDate(0, 0, -1).Truncate(time.Hour)
 			created, err := s.client.CreateLicense(ctx, license)
-			latest := time.Now().UTC().AddDate(1, 0, 0).Truncate(time.Hour)
+			latest := time.Now().UTC().AddDate(1, 0, 1).Truncate(time.Hour)
 			require.NoError(err, "could not create license")
 
 			require.Equal("Oskar Nyberg", created.Name, "name should be trimmed")
@@ -167,7 +167,7 @@ func (s *Suite) TestLicenseResource() {
 			require.Equal(int64(1), license.Downloads, "license downloads should match")
 			require.NotNil(license.LastAccess, "last access should be set")
 			require.False(license.LastAccess.IsZero(), "last access should be set")
-			require.True(expires.Equal(license.Expires), "license expires should match")
+			require.True(expires.Equal(license.Expires.Time), "license expires should match")
 			require.NotZero(license.Created, "created should be set")
 			require.NotZero(license.Modified, "modified should be set")
 		})
@@ -187,7 +187,7 @@ func (s *Suite) TestLicenseResource() {
 			credentials, err := s.client.LicenseCredentials(ctx, licenseID)
 			require.NoError(err, "could not retrieve license credentials")
 			require.Equal("01JQ8Z5K3N7M2W4X6Y8A0B1C2D", credentials.ClientID, "client ID should be the license ID")
-			require.Equal("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=", credentials.ClientSecret, "client secret should be the base64 encoded license secret")
+			require.Equal("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY", credentials.ClientSecret, "client secret should be the base64 encoded license secret")
 		})
 
 		s.Run("NotFound", func() {
@@ -215,7 +215,7 @@ func (s *Suite) TestLicenseResource() {
 				Email:       "compliance-eng@norrskenpay.se",
 				Description: "Production Envoy node for Norrsken Pay AB.",
 				Permissions: []string{"counterparties:admin", "daybreak:sync", "daybreak:download"},
-				Expires:     time.Date(2032, time.June, 1, 0, 0, 0, 0, time.UTC),
+				Expires:     api.Expiration(fields.Time(time.Date(2032, time.June, 1, 0, 0, 0, 0, time.UTC))),
 			}
 
 			updated, err := s.client.UpdateLicense(ctx, license)
@@ -236,7 +236,7 @@ func (s *Suite) TestLicenseResource() {
 			credentials, err := s.client.LicenseCredentials(ctx, original.ID)
 			require.NoError(err, "could not retrieve license credentials")
 			require.Equal("01JQ8Z5K3N7M2W4X6Y8A0B1C2D", credentials.ClientID, "client ID should be the same")
-			require.Equal("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=", credentials.ClientSecret, "client secret should be the same")
+			require.Equal("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY", credentials.ClientSecret, "client secret should be the same")
 		})
 
 		s.Run("NotFound", func() {

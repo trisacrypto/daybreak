@@ -129,6 +129,7 @@ func LoginRequired(c *gin.Context) {
 
 		if format == binding.MIMEHTML || htmx.IsHTMXRequest(c) {
 			c.Redirect(http.StatusTemporaryRedirect, "/login")
+			c.Abort()
 			return
 		}
 

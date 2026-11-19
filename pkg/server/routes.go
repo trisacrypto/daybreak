@@ -91,6 +91,9 @@ func (s *Server) setupRoutes() (err error) {
 		uia.GET("/companies/:id", Wrap("ui.company.detail", s.CompanyDetailPage))
 		uia.GET("/companies/:id/edit", Wrap("ui.company.edit", s.CompanyEditPage))
 		uia.GET("/licenses", Wrap("ui.licenses.list", s.LicenseDashboardPage))
+		uia.GET("/licenses/:id", Wrap("ui.licenses.detail", s.LicenseDetailPage))
+		uia.GET("/licenses/:id/edit", Wrap("ui.licenses.edit", s.LicenseEditPage))
+		uia.GET("/licenses/:id/credentials", Wrap("ui.licenses.credentials", s.DownloadLicense))
 	}
 
 	// API routes (unauthenticated)

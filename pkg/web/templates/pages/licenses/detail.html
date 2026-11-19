@@ -1,0 +1,117 @@
+{{ template "page.html" . }}
+{{- define "title" }}License Information | Daybreak{{ end }}
+
+{{- define "modals" }}
+{{- with .License }}
+{{ template "credentialsModal" . }}
+{{- end }}
+{{- end }}
+
+{{- define "page-content" }}
+{{- with .License }}
+<div class="header mt-md-5">
+  <div class="header-body">
+    <!-- Header -->
+    {{ template "licensesHeader" . }}
+
+    <!-- Tabs -->
+    {{ template "licensesTabs" dict "Page" $.Page "ID" .ID }}
+  </div>
+</div>
+
+<!-- License Information -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="row align-items-center">
+          <div class="col">
+            <h4 class="card-header-title">License Information</h4>
+          </div>
+          <div class="col-auto">
+            <a class="btn btn-sm btn-primary" href="#!" title="View Credentials"
+              data-bs-toggle="modal" data-bs-target="#credentialsModal">
+              <i class="fe fe-eye"></i>
+            </a>
+            <a class="btn btn-sm btn-info" href="/licenses/{{ .ID }}/credentials" title="Download Credentials">
+              <i class="fe fe-download"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row gy-4">
+          <div class="col-12 col-md-6">
+            <dl class="d-flex flex-column gap-4 mb-0">
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Owner</dt>
+                <dd class="mb-0 text-break">
+                 <a href="mailto:{{ .Email }}">{{ .Name }} &lt;{{ .Email }}&gt;</a>
+                </dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Description</dt>
+                <dd class="mb-0 text-break">
+                  {{- if .Description }}
+                  {{ .Description }}
+                  {{- else }}
+                  <span class="text-body-secondary">&mdash;</span>
+                  {{- end }}
+                </dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Expires</dt>
+                <dd class="mb-0 text-break {{ .ExpirationStatusClass }}">{{ .Expires.Format "January 01, 2006" }}</dd>
+                <dd class="my-0 text-break"><small class="text-muted">{{ moment .Expires.Time }}</small></dd>
+              </div>
+            </dl>
+          </div>
+          <div class="col-12 col-md-6">
+            <dl class="d-flex flex-column gap-4 mb-0">
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Permissions</dt>
+                <dd class="mb-0 text-break">
+                  {{- range .Permissions }}
+                  <span class="badge text-bg-primary">{{ . }}</span>
+                  {{- else }}
+                  <span class="text-bg-light">&mdash;</span>
+                  {{- end }}
+                </dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Last Access</dt>
+                <dd class="mb-0 text-break">
+                  {{- if .LastAccess }}
+                  <time datetime="{{ rfc3339 .LastAccess }}">{{ moment .LastAccess.Time }}</time>
+                  {{- else }}
+                  <span class="text-body-secondary">&mdash;</span>
+                  {{- end }}
+                </dd>
+              </div>
+              <div>
+                <dt class="h6 text-uppercase text-body-secondary mb-2">Accesses</dt>
+                <dd class="mb-0 text-break">
+                  <span class="badge text-bg-info">{{ .Syncs }} syncs</span>
+                  <span class="badge text-bg-info">{{ .Downloads }} downloads</span>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="d-flex flex-wrap justify-content-between column-gap-4 row-gap-1 small text-body-secondary">
+          <span>Client ID: <span class="font-monospace">{{ .ID }}</span></span>
+          <span>Modified <time datetime="{{ rfc3339 .Modified }}">{{ moment .Modified }}</time></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{- end }}
+{{- end }}
+
+{{- define "appcode" }}
+<script type="module" src="/static/js/modules/alerts.js"></script>
+<script type="module" src="/static/js/licenses/detail.js"></script>
+{{- end }}

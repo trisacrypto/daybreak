@@ -1,5 +1,4 @@
 import  Alerts from '../modules/alerts.js';
-import { createList } from '../modules/components.js';
 import { isRequestMatch } from '../htmx/helpers.js';
 
 const pageAlerts = new Alerts(document.querySelector('.pageAlerts'), { dismissible: true, autoClose: false });
@@ -44,6 +43,14 @@ if (editCompanyForm) {
       if (pageAlerts) {
         pageAlerts.success('','Company successfully updated.', { dismissible: true, autoClose: true });
       }
+
+      // Scroll to the top of the page.
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "smooth"
+      });
+
       return;
     }
 
@@ -87,7 +94,6 @@ Post-event handling when the company-deleted event is fired by the server.
 document.body.addEventListener("company-deleted", function(e) {
   window.location.replace("/companies");
 });
-
 
 /*
 Handle any htmx errors that are not swapped by the htmx config.

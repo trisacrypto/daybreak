@@ -1,0 +1,136 @@
+{{ template "page.html" . }}
+{{- define "title" }}Edit License | Daybreak{{ end }}
+
+{{- define "modals" }}
+{{ with .License }}
+<div id="confirmDeleteModal" class="modal" tabindex="-1">
+  <div class='modal-dialog'>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Revoke License?</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="lead">Are you sure you want to revoke this license?</p>
+      </div>
+      <div class="modal-footer">
+        <button id="deleteBtn" type="button" class="btn btn-danger" hx-delete="/v1/licenses/{{ .ID }}">Revoke</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}
+{{- end }}
+
+{{- define "page-content" }}
+{{- with .License }}
+<div class="header mt-md-5">
+  <div class="header-body">
+    <!-- Header -->
+    {{ template "licensesHeader" . }}
+
+    <!-- Tabs -->
+    {{ template "licensesTabs" dict "Page" $.Page "ID" .ID }}
+  </div>
+</div>
+<div class="row">
+  <div class="col-12">
+    <form id="editLicenseForm" hx-put="/v1/licenses/{{ .ID }}" hx-ext="form-json" hx-swap="none"
+      hx-indicator="#loader" hx-disabled-elt="find button[type='submit']">
+
+      <div class="row">
+        <div class="col-12 col-md-6">
+          <div class="form-group">
+            <label class="form-label mb-0" for="editLicenseName">Name</label>
+            <small class="form-text text-body-secondary">
+              The name of the license owner.
+            </small>
+            <input type="text" class="form-control" id="editLicenseName" name="name" value="{{ .Name }}" placeholder="Acme Company, LTD">
+            <div class="invalid-feedback"></div>
+          </div>
+        </div>
+        <div class="col-12 col-md-6">
+          <div class="form-group">
+            <label class="form-label mb-0" for="editLicenseEmail">Email</label>
+            <small class="form-text text-body-secondary">
+              The email address of the license owner.
+            </small>
+            <input type="text" class="form-control" id="editLicenseEmail" name="email" value="{{ .Email }}" placeholder="compliance@acme.com">
+            <div class="invalid-feedback"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-12 col-md-6">
+          <div class="form-group">
+            <label class="form-label mb-0" for="editLicenseDescription">Description</label>
+            <small class="form-text text-body-secondary">
+              A brief description of the license usage.
+            </small>
+            <input type="text" class="form-control" id="editLicenseDescription" name="description" value="{{ .Description }}" />
+            <div class="invalid-feedback"></div>
+          </div>
+        </div>
+        <div class="col-12 col-md-6">
+          <div class="form-group">
+            <label class="form-label mb-0" for="editLicenseExpires">Expires</label>
+            <small class="form-text text-body-secondary">
+              The date and time when the license expires.
+            </small>
+            <input type="date" class="form-control" id="editLicenseExpires" name="expires" value='{{ .Expires.Format "2006-01-02" }}' data-flatpickr>
+            <div class="invalid-feedback"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-12">
+          <div class="form-group">
+            <label class="form-label mb-0" for="editLicensePermissions">Permissions</label>
+            <small class="form-text text-body-secondary">
+              The permissions granted to the license.
+            </small>
+            <select class="form-control" id="editLicensePermissions" name="permissions" multiple data-choices='{"removeItemButton": true}'>
+             <option value="counterparties:admin" {{- if in .Permissions "counterparties:admin" }} selected {{ end -}}>counterparties:admin</option>
+              <option value="counterparties:create" {{- if in .Permissions "counterparties:create" }} selected {{ end -}}>counterparties:create</option>
+              <option value="daybreak:sync" {{- if in .Permissions "daybreak:sync" }} selected {{ end -}}>daybreak:sync</option>
+              <option value="daybreak:download" {{- if in .Permissions "daybreak:download" }} selected {{ end -}}>daybreak:download</option>
+              <option value="licenses:admin" {{- if in .Permissions "licenses:admin" }} selected {{ end -}}>licenses:admin</option>
+            </select>
+            <div class="invalid-feedback"></div>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <span id="loader" class="htmx-indicator spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    </form>
+  </div>
+</div>
+
+<hr class="mt-4 mb-5">
+
+<div class="row justify-content-between mb-7">
+  <div class="col-12 col-md-10">
+    <h4>Revoke License</h4>
+
+    <p class="small text-body-secondary mb-md-0">
+      This will revoke the license and prevent the client from syncing with or
+      downloading data from Daybreak. The license will be deleted, alternatively you
+      can edit the expiration date so the license becomes inactive.
+    </p>
+
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-danger mt-md-4" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">Revoke</button>
+  </div>
+</div>
+{{- end }}
+{{- end }}
+
+
+{{- define "appcode" }}
+<script type="module" src="/static/js/modules/components.js"></script>
+<script type="module" src="/static/js/licenses/edit.js"></script>
+{{- end }}

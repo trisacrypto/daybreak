@@ -1,12 +1,14 @@
 package api_test
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
+	"github.com/trisacrypto/daybreak/pkg/db/fields"
 	"go.rtnl.ai/ulid"
 	"go.rtnl.ai/x/validation"
 )
@@ -19,8 +21,96 @@ func mockLicense() *api.License {
 		Email:       "bob@bobsvasp.co.uk",
 		Description: "Production Envoy node license",
 		Permissions: []string{"daybreak:sync", "daybreak:download"},
-		Expires:     time.Date(2030, time.January, 1, 0, 0, 0, 0, time.UTC),
+		Expires:     api.Expiration(fields.Time(time.Date(2030, time.January, 1, 0, 0, 0, 0, time.UTC))),
 	}
+}
+
+func TestLicenseUnmarshalJSON(t *testing.T) {
+	t.Run("Expires", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			expires  string
+			expected time.Time
+		}{
+			{"DateOnly", `"2030-01-02"`, time.Date(2030, time.January, 2, 0, 0, 0, 0, time.UTC)},
+			{"DateTimeMinutes", `"2030-01-02 15:16"`, time.Date(2030, time.January, 2, 15, 16, 0, 0, time.UTC)},
+			{"DateTimeSeconds", `"2030-01-02 15:16:17"`, time.Date(2030, time.January, 2, 15, 16, 17, 0, time.UTC)},
+			{"RFC3339", `"2030-01-02T15:16:17Z"`, time.Date(2030, time.January, 2, 15, 16, 17, 0, time.UTC)},
+			{"RFC3339Nano", `"2030-01-02T15:16:17.123456789Z"`, time.Date(2030, time.January, 2, 15, 16, 17, 123456789, time.UTC)},
+			{"RFC3339Offset", `"2030-01-02T15:16:17-06:00"`, time.Date(2030, time.January, 2, 21, 16, 17, 0, time.UTC)},
+			{"Null", `null`, time.Time{}},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				license := &api.License{}
+				data := []byte(`{"name": "Bob's Discount VASP", "expires": ` + tc.expires + `}`)
+				require.NoError(t, json.Unmarshal(data, license))
+				require.True(t, tc.expected.Equal(license.Expires.Time), "expected %s got %s", tc.expected, license.Expires)
+				require.Equal(t, "Bob's Discount VASP", license.Name)
+			})
+		}
+	})
+
+	t.Run("InvalidExpires", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			expires string
+		}{
+			{"Empty", `""`},
+			{"NotADate", `"tomorrow"`},
+			{"InvalidMonth", `"2030-13-02"`},
+			{"InvalidHour", `"2030-01-02 25:16"`},
+			{"USDate", `"01/02/2030"`},
+			{"PartialTime", `"2030-01-02 15"`},
+			{"TrailingData", `"2030-01-02 15:16:17 CST"`},
+			{"Number", `1893597377`},
+			{"Bool", `true`},
+			{"Object", `{}`},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				license := &api.License{}
+				data := []byte(`{"name": "Bob's Discount VASP", "expires": ` + tc.expires + `}`)
+				require.Error(t, json.Unmarshal(data, license))
+			})
+		}
+	})
+
+	t.Run("OmittedExpires", func(t *testing.T) {
+		// An omitted expires is zero-valued so that it is defaulted by validation.
+		license := &api.License{}
+		require.NoError(t, json.Unmarshal([]byte(`{"name": "Bob's Discount VASP"}`), license))
+		require.True(t, license.Expires.IsZero())
+
+		// As with the standard library, fields not in the JSON are not modified.
+		license = mockLicense()
+		expires := license.Expires
+		require.NoError(t, json.Unmarshal([]byte(`{"name": "Alice's VASP"}`), license))
+		require.Equal(t, "Alice's VASP", license.Name)
+		require.Equal(t, "bob@bobsvasp.co.uk", license.Email)
+		require.Equal(t, expires, license.Expires)
+	})
+
+	t.Run("RoundTrip", func(t *testing.T) {
+		// Marshaling is unchanged, so all fields must survive a round trip.
+		lastAccess := time.Date(2029, time.June, 15, 8, 30, 0, 0, time.UTC)
+		license := mockLicense()
+		license.ID = ulid.Make()
+		license.Syncs = 42
+		license.Downloads = 7
+		license.LastAccess = &lastAccess
+		license.Created = time.Date(2029, time.January, 1, 0, 0, 0, 0, time.UTC)
+		license.Modified = time.Date(2029, time.February, 1, 0, 0, 0, 0, time.UTC)
+
+		data, err := json.Marshal(license)
+		require.NoError(t, err)
+
+		actual := &api.License{}
+		require.NoError(t, json.Unmarshal(data, actual))
+		require.Equal(t, license, actual)
+	})
 }
 
 func TestLicenseValidate(t *testing.T) {
@@ -31,7 +121,7 @@ func TestLicenseValidate(t *testing.T) {
 		}{
 			{"Complete", func(l *api.License) {}},
 			{"NoDescription", func(l *api.License) { l.Description = "" }},
-			{"NoExpires", func(l *api.License) { l.Expires = time.Time{} }},
+			{"NoExpires", func(l *api.License) { l.Expires = api.ExpirationDate{} }},
 			{"EmailWithDisplayName", func(l *api.License) { l.Email = "Bob Smith <bob@bobsvasp.co.uk>" }},
 			{"EmailSubaddress", func(l *api.License) { l.Email = "bob+licenses@bobsvasp.co.uk" }},
 			{"ZeroLastAccess", func(l *api.License) { l.LastAccess = &time.Time{} }},
@@ -61,7 +151,7 @@ func TestLicenseValidate(t *testing.T) {
 			Email:       "\tbob@bobsvasp.co.uk  ",
 			Description: " Production Envoy node license\t",
 			Permissions: []string{" Daybreak:Sync", "COUNTERPARTIES:ADMIN\t", "daybreak:download"},
-			Expires:     time.Date(2030, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Expires:     api.Expiration(fields.Time(time.Date(2030, time.January, 1, 0, 0, 0, 0, time.UTC))),
 		}
 
 		require.NoError(t, license.Validate("POST"))
@@ -81,7 +171,7 @@ func TestLicenseValidate(t *testing.T) {
 		// A zero expires is normalized to one year from now (UTC), truncated to the hour.
 		for _, method := range []string{"POST", "PUT", ""} {
 			license := mockLicense()
-			license.Expires = time.Time{}
+			license.Expires = api.ExpirationDate{}
 
 			earliest := time.Now().UTC().AddDate(1, 0, 0).Truncate(time.Hour)
 			require.NoError(t, license.Validate(method), "expected no error for method %q", method)
@@ -100,11 +190,11 @@ func TestLicenseValidate(t *testing.T) {
 		require.False(t, license.Expires.IsZero(), "expected expires to be set on an invalid license")
 
 		// A user supplied expires is not modified, including its granularity and location.
-		expires := time.Date(2030, time.January, 1, 12, 34, 56, 789, time.FixedZone("CST", -6*60*60))
+		expires := time.Date(2030, time.January, 1, 12, 34, 56, 0, time.FixedZone("CST", -6*60*60))
 		license = mockLicense()
-		license.Expires = expires
+		license.Expires = api.Expiration(fields.Time(expires))
 		require.NoError(t, license.Validate("POST"))
-		require.Equal(t, expires, license.Expires)
+		require.True(t, expires.Equal(license.Expires.Time), "expected expires to match")
 	})
 
 	t.Run("Invalid", func(t *testing.T) {

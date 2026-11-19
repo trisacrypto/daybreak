@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/mail"
 	"slices"
@@ -25,17 +26,17 @@ var validPermissions = []string{
 }
 
 type License struct {
-	ID          ulid.ULID  `json:"id"`
-	Name        string     `json:"name"`
-	Email       string     `json:"email"`
-	Description string     `json:"description"`
-	Permissions []string   `json:"permissions"`
-	Syncs       int64      `json:"syncs"`
-	Downloads   int64      `json:"downloads"`
-	LastAccess  *time.Time `json:"last_access"`
-	Expires     time.Time  `json:"expires,omitzero"`
-	Created     time.Time  `json:"created,omitzero"`
-	Modified    time.Time  `json:"modified,omitzero"`
+	ID          ulid.ULID      `json:"id"`
+	Name        string         `json:"name"`
+	Email       string         `json:"email"`
+	Description string         `json:"description"`
+	Permissions []string       `json:"permissions"`
+	Syncs       int64          `json:"syncs"`
+	Downloads   int64          `json:"downloads"`
+	LastAccess  *time.Time     `json:"last_access"`
+	Expires     ExpirationDate `json:"expires,omitzero"`
+	Created     time.Time      `json:"created,omitzero"`
+	Modified    time.Time      `json:"modified,omitzero"`
 }
 
 type LicenseCredentials struct {
@@ -52,7 +53,7 @@ func NewLicense(model *db.License) *License {
 		Permissions: model.Permissions,
 		Syncs:       model.Syncs,
 		Downloads:   model.Downloads,
-		Expires:     model.Expires.Time(),
+		Expires:     Expiration(model.Expires),
 		Created:     model.Created.Time(),
 		Modified:    model.Modified.Time(),
 	}
@@ -68,7 +69,7 @@ func NewLicense(model *db.License) *License {
 func NewLicenseCredentials(model *db.License) *LicenseCredentials {
 	return &LicenseCredentials{
 		ClientID:     model.ID.String(),
-		ClientSecret: base64.StdEncoding.EncodeToString(model.Secret),
+		ClientSecret: base64.RawStdEncoding.EncodeToString(model.Secret),
 	}
 }
 
@@ -78,7 +79,7 @@ func (l *License) Model() *db.License {
 		Email:       l.Email,
 		Description: sql.NullString{String: l.Description, Valid: l.Description != ""},
 		Permissions: l.Permissions,
-		Expires:     fields.Time(l.Expires),
+		Expires:     l.Expires.Timestamp(),
 	}
 }
 
@@ -138,7 +139,7 @@ func (l *License) Validate(method string) (err error) {
 
 	// Default the expiration to one year from now at hour granularity.
 	if l.Expires.IsZero() {
-		l.Expires = time.Now().UTC().AddDate(1, 0, 0).Truncate(time.Hour)
+		l.Expires = ExpiresNextYear()
 	}
 
 	return err
@@ -152,4 +153,74 @@ func (l *License) Clone() *License {
 		Permissions: l.Permissions,
 		Expires:     l.Expires,
 	}
+}
+
+func (l *License) ExpirationStatusClass() string {
+	if l.Expires.IsZero() {
+		return "text-muted"
+	}
+
+	if l.Expires.Before(time.Now().UTC()) {
+		return "text-danger"
+	}
+
+	if l.Expires.Before(time.Now().UTC().AddDate(0, 0, 60)) {
+		return "text-warning"
+	}
+
+	return ""
+}
+
+//============================================================================
+// Expires Timestamp
+//============================================================================
+
+type ExpirationDate struct {
+	time.Time
+}
+
+func Expiration(t fields.Timestamp) ExpirationDate {
+	return ExpirationDate{Time: t.Time()}
+}
+
+func ExpiresNextYear() ExpirationDate {
+	return ExpirationDate{Time: time.Now().UTC().AddDate(1, 0, 0).Truncate(time.Hour)}
+}
+
+// The layouts that the expires timestamp of a license can be parsed from in addition
+// to RFC3339. These layouts have no timezone, so they are interpreted as UTC.
+var expiresLayouts = []string{
+	time.DateTime,      // 2006-01-02 15:04:05
+	"2006-01-02 15:04", // no seconds
+	time.DateOnly,      // 2006-01-02
+}
+
+func (t *ExpirationDate) UnmarshalJSON(data []byte) (err error) {
+	var ts time.Time
+	if err = ts.UnmarshalJSON(data); err == nil {
+		*t = ExpirationDate{Time: ts}
+		return nil
+	}
+
+	var s string
+	if json.Unmarshal(data, &s) != nil {
+		return err
+	}
+
+	for _, layout := range expiresLayouts {
+		if ts, err = time.Parse(layout, s); err == nil {
+			*t = ExpirationDate{Time: ts}
+			return nil
+		}
+	}
+
+	return fmt.Errorf("cannot parse %q as an expiration date", s)
+}
+
+func (t ExpirationDate) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.Format(time.DateOnly))
+}
+
+func (t ExpirationDate) Timestamp() fields.Timestamp {
+	return fields.Time(t.Time)
 }
