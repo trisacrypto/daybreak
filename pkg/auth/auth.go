@@ -274,7 +274,7 @@ func StateCookie(c *gin.Context) string {
 	}
 
 	state := base64.URLEncoding.EncodeToString(buf)
-	c.SetCookie(OAuthStateKey, state, int(OAuthStateTTL.Seconds()), "/", "", false, true)
+	c.SetCookie(OAuthStateKey, state, int(OAuthStateTTL.Seconds()), "/", "", true, true)
 	return state
 }
 

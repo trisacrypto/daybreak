@@ -58,7 +58,7 @@ func (s *Server) AuthCallback(ctx context.Context, c *gin.Context) *errors.HTTP 
 	}
 
 	// Clean up state cookie
-	c.SetCookie(auth.OAuthStateKey, "", -1, "/", "", false, true)
+	c.SetCookie(auth.OAuthStateKey, "", -1, "/", "", true, true)
 
 	// Use the authorization code to get an access token
 	if token, err = s.auth.Exchange(ctx, c.Query("code")); err != nil {
