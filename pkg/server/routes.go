@@ -104,12 +104,12 @@ func (s *Server) setupRoutes() (err error) {
 	}
 
 	// Authenticated API Routes
-	v1a := s.router.Group("/v1", auth.Authenticate(s.db))
+	v1a := s.router.Group("/v1", auth.Authenticate(s))
 	{
 		// Companies Resource
 		v1a.GET("/companies", auth.EnvoyUser, Wrap("api.companies.list", s.ListCompanies))
 		v1a.POST("/companies", auth.DaybreakContributor, Wrap("api.companies.create", s.CreateCompany))
-		v1a.GET("/companies/:id", auth.EnvoyUser, Wrap("api.companies.retrieve", s.RetrieveCompany))
+		v1a.GET("/companies/:id", auth.EnvoyUser, Wrap("api.companies.detail", s.CompanyDetail))
 		v1a.PUT("/companies/:id", auth.DaybreakEditor, Wrap("api.companies.update", s.UpdateCompany))
 		v1a.DELETE("/companies/:id", auth.DaybreakEditor, Wrap("api.companies.delete", s.DeleteCompany))
 
@@ -120,14 +120,14 @@ func (s *Server) setupRoutes() (err error) {
 		// Contacts Resource
 		v1a.GET("/contacts", auth.EnvoyUser, Wrap("api.contacts.list", s.ListContacts))
 		v1a.POST("/contacts", auth.DaybreakEditor, Wrap("api.contacts.create", s.CreateContact))
-		v1a.GET("/contacts/:id", auth.EnvoyUser, Wrap("api.contacts.retrieve", s.RetrieveContact))
+		v1a.GET("/contacts/:id", auth.EnvoyUser, Wrap("api.contacts.detail", s.ContactDetail))
 		v1a.PUT("/contacts/:id", auth.DaybreakEditor, Wrap("api.contacts.update", s.UpdateContact))
 		v1a.DELETE("/contacts/:id", auth.DaybreakEditor, Wrap("api.contacts.delete", s.DeleteContact))
 
 		// Licenses Resource
 		v1a.GET("/licenses", auth.DaybreakLicensor, Wrap("api.licenses.list", s.ListLicenses))
 		v1a.POST("/licenses", auth.DaybreakLicensor, Wrap("api.licenses.create", s.CreateLicense))
-		v1a.GET("/licenses/:id", auth.DaybreakLicensor, Wrap("api.licenses.retrieve", s.RetrieveLicense))
+		v1a.GET("/licenses/:id", auth.DaybreakLicensor, Wrap("api.licenses.detail", s.LicenseDetail))
 		v1a.GET("/licenses/:id/credentials", auth.DaybreakLicensor, Wrap("api.licenses.credentials", s.LicenseCredentials))
 		v1a.PUT("/licenses/:id", auth.DaybreakLicensor, Wrap("api.licenses.update", s.UpdateLicense))
 		v1a.DELETE("/licenses/:id", auth.DaybreakLicensor, Wrap("api.licenses.delete", s.DeleteLicense))

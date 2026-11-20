@@ -124,7 +124,7 @@ func (s *Server) createCompany(ctx context.Context, company *db.Company, contact
 	return nil
 }
 
-func (s *Server) RetrieveCompany(ctx context.Context, c *gin.Context) *errors.HTTP {
+func (s *Server) CompanyDetail(ctx context.Context, c *gin.Context) *errors.HTTP {
 	var (
 		err       error
 		companyID uuid.UUID

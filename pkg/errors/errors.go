@@ -32,6 +32,7 @@ var (
 
 	// Development errors
 	ErrUnknown        = errors.New("an unknown error occurred")
+	ErrNoDatabase     = errors.New("database not initialized")
 	ErrNotImplemented = errors.New("this operation is not implemented")
 )
 

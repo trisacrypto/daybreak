@@ -8,8 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
 	"github.com/trisacrypto/daybreak/pkg/auth"
+	"github.com/trisacrypto/daybreak/pkg/db"
 	"github.com/trisacrypto/daybreak/pkg/errors"
 	"github.com/trisacrypto/daybreak/pkg/web/scene"
+	"go.rtnl.ai/ulid"
 	"golang.org/x/oauth2"
 )
 
@@ -88,4 +90,19 @@ func (s *Server) AuthCallback(ctx context.Context, c *gin.Context) *errors.HTTP 
 	// Redirect the user back to the dashboard
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 	return nil
+}
+
+//============================================================================
+// Utilities
+//============================================================================
+
+// The server implements the LicenseIdentifier interface to ensure that if the database
+// connection is reset, the middleware can still retrieve the license from the database.
+func (s *Server) RetrieveLicense(ctx context.Context, licenseID ulid.ULID) (*db.License, error) {
+	s.RLock()
+	defer s.RUnlock()
+	if s.db == nil {
+		return nil, errors.ErrNoDatabase
+	}
+	return s.db.RetrieveLicense(ctx, licenseID)
 }

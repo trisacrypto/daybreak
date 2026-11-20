@@ -69,7 +69,7 @@ func (s *Server) CreateLicense(ctx context.Context, c *gin.Context) *errors.HTTP
 	return nil
 }
 
-func (s *Server) RetrieveLicense(ctx context.Context, c *gin.Context) *errors.HTTP {
+func (s *Server) LicenseDetail(ctx context.Context, c *gin.Context) *errors.HTTP {
 	var (
 		err       error
 		licenseID ulid.ULID
