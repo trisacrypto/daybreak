@@ -42,6 +42,13 @@ func (l *License) Scan(scanner Scanner) error {
 	)
 }
 
+func (l *License) IsExpired() bool {
+	if l.Expires.IsZero() {
+		return false
+	}
+	return l.Expires.Before(fields.TimeNow())
+}
+
 //============================================================================
 // Transactions CRUD
 //============================================================================

@@ -28,6 +28,7 @@ var (
 	ErrInvalidOAuthState = errors.New("oauth state mismatch: possible CSRF attack")
 	ErrInvalidUserInfo   = errors.New("user info returned from OAuth provider is invalid")
 	ErrDomainNotAllowed  = errors.New("email domain not allowed")
+	ErrInvalidRequestID  = errors.New("invalid request ID")
 
 	// Development errors
 	ErrUnknown        = errors.New("an unknown error occurred")

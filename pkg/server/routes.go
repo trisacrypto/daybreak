@@ -8,6 +8,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/trisacrypto/daybreak/pkg"
+	"github.com/trisacrypto/daybreak/pkg/auth"
 	"github.com/trisacrypto/daybreak/pkg/web"
 	"go.rtnl.ai/gimlet/htmx"
 	"go.rtnl.ai/gimlet/logger"
@@ -75,15 +76,15 @@ func (s *Server) setupRoutes() (err error) {
 
 	// Authentication routes
 	s.router.GET("/login", AcceptHTML, Wrap("ui.login", s.LoginPage))
-	auth := s.router.Group("/auth")
+	aui := s.router.Group("/auth")
 	{
-		auth.GET("/login", Wrap("ui.auth.login", s.AuthLogin))
-		auth.GET("/logout", Wrap("ui.auth.logout", s.AuthLogout))
-		auth.GET("/callback", Wrap("ui.auth.callback", s.AuthCallback))
+		aui.GET("/login", Wrap("ui.auth.login", s.AuthLogin))
+		aui.GET("/logout", Wrap("ui.auth.logout", s.AuthLogout))
+		aui.GET("/callback", Wrap("ui.auth.callback", s.AuthCallback))
 	}
 
 	// Web UI routes (authenticated)
-	uia := s.router.Group("", AcceptHTML, LoginRequired)
+	uia := s.router.Group("", AcceptHTML, auth.LoginRequired)
 	{
 		uia.GET("/", Wrap("ui.dashboard", s.DashboardPage))
 		uia.GET("/about", Wrap("ui.about", s.AboutPage))
@@ -103,36 +104,36 @@ func (s *Server) setupRoutes() (err error) {
 	}
 
 	// Authenticated API Routes
-	v1a := s.router.Group("/v1", LoginRequired)
+	v1a := s.router.Group("/v1", auth.Authenticate(s.db))
 	{
 		// Companies Resource
-		v1a.GET("/companies", Wrap("api.companies.list", s.ListCompanies))
-		v1a.POST("/companies", Wrap("api.companies.create", s.CreateCompany))
-		v1a.GET("/companies/:id", Wrap("api.companies.retrieve", s.RetrieveCompany))
-		v1a.PUT("/companies/:id", Wrap("api.companies.update", s.UpdateCompany))
-		v1a.DELETE("/companies/:id", Wrap("api.companies.delete", s.DeleteCompany))
+		v1a.GET("/companies", auth.EnvoyUser, Wrap("api.companies.list", s.ListCompanies))
+		v1a.POST("/companies", auth.DaybreakContributor, Wrap("api.companies.create", s.CreateCompany))
+		v1a.GET("/companies/:id", auth.EnvoyUser, Wrap("api.companies.retrieve", s.RetrieveCompany))
+		v1a.PUT("/companies/:id", auth.DaybreakEditor, Wrap("api.companies.update", s.UpdateCompany))
+		v1a.DELETE("/companies/:id", auth.DaybreakEditor, Wrap("api.companies.delete", s.DeleteCompany))
 
 		// Nested Company Contacts Helper Actions
-		v1a.GET("/companies/:id/contacts", Wrap("api.companies.contacts.list", s.ListCompanyContacts))
-		v1a.POST("/companies/:id/contacts", Wrap("api.companies.contacts.create", s.CreateCompanyContact))
+		v1a.GET("/companies/:id/contacts", auth.EnvoyUser, Wrap("api.companies.contacts.list", s.ListCompanyContacts))
+		v1a.POST("/companies/:id/contacts", auth.DaybreakContributor, Wrap("api.companies.contacts.create", s.CreateCompanyContact))
 
 		// Contacts Resource
-		v1a.GET("/contacts", Wrap("api.contacts.list", s.ListContacts))
-		v1a.POST("/contacts", Wrap("api.contacts.create", s.CreateContact))
-		v1a.GET("/contacts/:id", Wrap("api.contacts.retrieve", s.RetrieveContact))
-		v1a.PUT("/contacts/:id", Wrap("api.contacts.update", s.UpdateContact))
-		v1a.DELETE("/contacts/:id", Wrap("api.contacts.delete", s.DeleteContact))
+		v1a.GET("/contacts", auth.EnvoyUser, Wrap("api.contacts.list", s.ListContacts))
+		v1a.POST("/contacts", auth.DaybreakEditor, Wrap("api.contacts.create", s.CreateContact))
+		v1a.GET("/contacts/:id", auth.EnvoyUser, Wrap("api.contacts.retrieve", s.RetrieveContact))
+		v1a.PUT("/contacts/:id", auth.DaybreakEditor, Wrap("api.contacts.update", s.UpdateContact))
+		v1a.DELETE("/contacts/:id", auth.DaybreakEditor, Wrap("api.contacts.delete", s.DeleteContact))
 
 		// Licenses Resource
-		v1a.GET("/licenses", Wrap("api.licenses.list", s.ListLicenses))
-		v1a.POST("/licenses", Wrap("api.licenses.create", s.CreateLicense))
-		v1a.GET("/licenses/:id", Wrap("api.licenses.retrieve", s.RetrieveLicense))
-		v1a.GET("/licenses/:id/credentials", Wrap("api.licenses.credentials", s.LicenseCredentials))
-		v1a.PUT("/licenses/:id", Wrap("api.licenses.update", s.UpdateLicense))
-		v1a.DELETE("/licenses/:id", Wrap("api.licenses.delete", s.DeleteLicense))
+		v1a.GET("/licenses", auth.DaybreakLicensor, Wrap("api.licenses.list", s.ListLicenses))
+		v1a.POST("/licenses", auth.DaybreakLicensor, Wrap("api.licenses.create", s.CreateLicense))
+		v1a.GET("/licenses/:id", auth.DaybreakLicensor, Wrap("api.licenses.retrieve", s.RetrieveLicense))
+		v1a.GET("/licenses/:id/credentials", auth.DaybreakLicensor, Wrap("api.licenses.credentials", s.LicenseCredentials))
+		v1a.PUT("/licenses/:id", auth.DaybreakLicensor, Wrap("api.licenses.update", s.UpdateLicense))
+		v1a.DELETE("/licenses/:id", auth.DaybreakLicensor, Wrap("api.licenses.delete", s.DeleteLicense))
 
 		// Informational endpoints and statistics
-		v1a.GET("/countries", Wrap("api.countries.counts", s.CountryCounts))
+		v1a.GET("/countries", auth.EnvoyUser, Wrap("api.countries.counts", s.CountryCounts))
 
 		// HTMX only endpoints for the dashboard
 		dash := v1a.Group("/dashboard", htmx.Only)

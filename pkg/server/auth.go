@@ -2,39 +2,20 @@ package server
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
-	"encoding/gob"
-	"encoding/json"
-	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
-	"github.com/trisacrypto/daybreak/pkg"
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
+	"github.com/trisacrypto/daybreak/pkg/auth"
 	"github.com/trisacrypto/daybreak/pkg/errors"
 	"github.com/trisacrypto/daybreak/pkg/web/scene"
-	"go.rtnl.ai/gimlet/htmx"
-	"go.rtnl.ai/x/gravatar"
 	"golang.org/x/oauth2"
 )
-
-func init() {
-	gob.Register(UserInfo{})
-}
 
 //============================================================================
 // Handlers
 //============================================================================
-
-const (
-	oauthStateTTL  = 20 * time.Minute
-	oauthStateKey  = "oauth_state"
-	userSessionKey = "user"
-)
 
 func (s *Server) LoginPage(ctx context.Context, c *gin.Context) *errors.HTTP {
 	data := scene.New(c).ForPage("login")
@@ -43,14 +24,14 @@ func (s *Server) LoginPage(ctx context.Context, c *gin.Context) *errors.HTTP {
 }
 
 func (s *Server) AuthLogin(ctx context.Context, c *gin.Context) *errors.HTTP {
-	redirect := s.auth.AuthCodeURL(oauthStateCookie(c))
+	redirect := s.auth.AuthCodeURL(auth.StateCookie(c))
 	c.Redirect(http.StatusTemporaryRedirect, redirect)
 	return nil
 }
 
 func (s *Server) AuthLogout(ctx context.Context, c *gin.Context) *errors.HTTP {
 	session := sessions.Default(c)
-	session.Delete(userSessionKey)
+	session.Delete(auth.UserSessionKey)
 	session.Clear()
 
 	if err := session.Save(); err != nil {
@@ -66,16 +47,16 @@ func (s *Server) AuthCallback(ctx context.Context, c *gin.Context) *errors.HTTP 
 	var (
 		err      error
 		token    *oauth2.Token
-		userinfo *UserInfo
+		userinfo *auth.UserInfo
 	)
 
 	// Validate state parameter against CSRF attacks
-	if oauthState, cerr := c.Cookie(oauthStateKey); cerr != nil || oauthState != c.Query("state") {
+	if oauthState, cerr := c.Cookie(auth.OAuthStateKey); cerr != nil || oauthState != c.Query("state") {
 		return api.Error(http.StatusBadRequest, errors.ErrInvalidOAuthState, "invalid oauth state")
 	}
 
 	// Clean up state cookie
-	c.SetCookie(oauthStateKey, "", -1, "/", "", false, true)
+	c.SetCookie(auth.OAuthStateKey, "", -1, "/", "", false, true)
 
 	// Use the authorization code to get an access token
 	if token, err = s.auth.Exchange(ctx, c.Query("code")); err != nil {
@@ -83,7 +64,7 @@ func (s *Server) AuthCallback(ctx context.Context, c *gin.Context) *errors.HTTP 
 	}
 
 	// Get the user information
-	if userinfo, err = userInfo(ctx, token); err != nil {
+	if userinfo, err = auth.Profile(ctx, token); err != nil {
 		return api.Error(http.StatusInternalServerError, err, "failed to get user information")
 	}
 
@@ -99,7 +80,7 @@ func (s *Server) AuthCallback(ctx context.Context, c *gin.Context) *errors.HTTP 
 
 	// Save the user information to the session
 	session := sessions.Default(c)
-	session.Set(userSessionKey, userinfo)
+	session.Set(auth.UserSessionKey, userinfo)
 	if err := session.Save(); err != nil {
 		return api.Error(http.StatusInternalServerError, err, "failed to save session")
 	}
@@ -107,97 +88,4 @@ func (s *Server) AuthCallback(ctx context.Context, c *gin.Context) *errors.HTTP 
 	// Redirect the user back to the dashboard
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 	return nil
-}
-
-//============================================================================
-// Middleware
-//============================================================================
-
-// LoginRequired is a session based middleware that is for the UI only.
-func LoginRequired(c *gin.Context) {
-	// TODO: this is a hack for testing only, use license key to authenticate
-	if c.Request.Header.Get("Authorization") == "Bearer testing" {
-		c.Next()
-		return
-	}
-
-	session := sessions.Default(c)
-	user := session.Get(userSessionKey)
-
-	if user == nil {
-		format := c.NegotiateFormat(binding.MIMEHTML, binding.MIMEJSON)
-
-		if format == binding.MIMEHTML || htmx.IsHTMXRequest(c) {
-			c.Redirect(http.StatusTemporaryRedirect, "/login")
-			c.Abort()
-			return
-		}
-
-		c.AbortWithStatusJSON(http.StatusUnauthorized, api.Unauthorized)
-		return
-	}
-
-	c.Next()
-}
-
-//============================================================================
-// UserInfo
-//============================================================================
-
-type UserInfo struct {
-	Sub           string `json:"sub"`
-	Name          string `json:"name"`
-	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified"`
-	HD            string `json:"hd"`
-	FamilyName    string `json:"family_name"`
-	GivenName     string `json:"given_name"`
-	Picture       string `json:"picture"`
-	Gravatar      string `json:"-"`
-}
-
-//============================================================================
-// Helpers
-//============================================================================
-
-func oauthStateCookie(c *gin.Context) string {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
-		panic(fmt.Errorf("failed to generate random bytes: %w", err))
-	}
-
-	state := base64.URLEncoding.EncodeToString(buf)
-	c.SetCookie(oauthStateKey, state, int(oauthStateTTL.Seconds()), "/", "", false, true)
-	return state
-}
-
-const userinfoURL = "https://www.googleapis.com/oauth2/v3/userinfo"
-
-func userInfo(ctx context.Context, token *oauth2.Token) (*UserInfo, error) {
-	var (
-		err error
-		req *http.Request
-		rep *http.Response
-	)
-
-	if req, err = http.NewRequestWithContext(ctx, http.MethodGet, userinfoURL, nil); err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", fmt.Sprintf("daybreak/%s", pkg.Version(false)))
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
-
-	if rep, err = http.DefaultClient.Do(req); err != nil {
-		return nil, err
-	}
-	defer rep.Body.Close()
-
-	userinfo := &UserInfo{}
-	if err = json.NewDecoder(rep.Body).Decode(&userinfo); err != nil {
-		return nil, err
-	}
-
-	userinfo.Gravatar = gravatar.New(userinfo.Email, nil)
-	return userinfo, nil
 }
