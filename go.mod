@@ -3,6 +3,7 @@ module github.com/trisacrypto/daybreak
 go 1.27.3
 
 require (
+	github.com/bits-and-blooms/bloom/v3 v3.7.2
 	github.com/gin-contrib/cors v1.7.11
 	github.com/gin-contrib/sessions v1.1.4
 	github.com/gin-gonic/gin v1.12.0
@@ -27,6 +28,7 @@ require (
 
 require (
 	cloud.google.com/go/compute/metadata v0.10.0 // indirect
+	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/bytedance/gopkg v0.1.4 // indirect
 	github.com/bytedance/sonic v1.15.5 // indirect
 	github.com/bytedance/sonic/loader v0.5.3 // indirect

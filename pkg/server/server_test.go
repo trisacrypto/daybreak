@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"sort"
@@ -11,8 +12,17 @@ import (
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
 	"github.com/trisacrypto/daybreak/pkg/config"
 	"github.com/trisacrypto/daybreak/pkg/db"
+	"go.rtnl.ai/ulid"
 	"go.rtnl.ai/x/rlog"
 )
+
+// cSpell: disable
+var (
+	adminID        = ulid.MustParse("01M7WRCMGA68DHQ68KF966J0CZ")
+	adminSecret, _ = base64.RawStdEncoding.DecodeString("reY/fH04ptMFaVUK0UeETeo8F3MIHWg/AAeJEbty7aM")
+)
+
+// cSpell: enable
 
 func TestServer(t *testing.T) {
 	suite.Run(t, new(Suite))
@@ -68,7 +78,7 @@ func (s *Suite) SetupSuite() {
 	go s.server.Serve()
 	time.Sleep(100 * time.Millisecond)
 
-	s.client, err = api.New(s.server.URL().String())
+	s.client, err = api.New(s.server.URL().String(), api.WithCredentials(adminID, adminSecret))
 	require.NoError(err, "could not create client")
 }
 

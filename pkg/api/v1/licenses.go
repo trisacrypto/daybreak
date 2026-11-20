@@ -6,24 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/mail"
-	"slices"
 	"strings"
 	"time"
 
+	"github.com/trisacrypto/daybreak/pkg/auth"
 	"github.com/trisacrypto/daybreak/pkg/db"
 	"github.com/trisacrypto/daybreak/pkg/db/fields"
 	"go.rtnl.ai/ulid"
 	"go.rtnl.ai/x/validation"
 )
-
-// This are the valid permissions that can be assigned to a license.
-var validPermissions = []string{
-	"counterparties:admin",
-	"counterparties:create",
-	"daybreak:sync",
-	"daybreak:download",
-	"licenses:admin",
-}
 
 type License struct {
 	ID          ulid.ULID      `json:"id"`
@@ -128,7 +119,7 @@ func (l *License) Validate(method string) (err error) {
 
 	for i := range l.Permissions {
 		l.Permissions[i] = strings.ToLower(strings.TrimSpace(l.Permissions[i]))
-		if !slices.Contains(validPermissions, l.Permissions[i]) {
+		if !auth.IsValidPermission(l.Permissions[i]) {
 			msg := fmt.Sprintf("%q is not a valid permission", l.Permissions[i])
 			err = validation.Error(
 				err,

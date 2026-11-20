@@ -183,7 +183,7 @@ func (s *Server) createContact(ctx context.Context, contact *db.Contact) *errors
 	return nil
 }
 
-func (s *Server) RetrieveContact(ctx context.Context, c *gin.Context) *errors.HTTP {
+func (s *Server) ContactDetail(ctx context.Context, c *gin.Context) *errors.HTTP {
 	var (
 		err       error
 		contactID uuid.UUID

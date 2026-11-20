@@ -22,7 +22,7 @@ func (s *Suite) TestLicenseResource() {
 		require := s.Require()
 		licenses, err := s.client.ListLicenses(ctx)
 		require.NoError(err, "could not list licenses")
-		require.Equal(8, len(licenses), "should have 8 licenses")
+		require.Equal(9, len(licenses), "should have 9 licenses")
 	})
 
 	s.Run("CreateLicense", func() {
