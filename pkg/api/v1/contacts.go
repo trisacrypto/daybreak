@@ -15,14 +15,14 @@ import (
 )
 
 type Contact struct {
-	ID        uuid.UUID       `json:"id"`
-	Name      string          `json:"name"`
-	Email     string          `json:"email"`
-	Role      string          `json:"role"`
-	IVMS101   json.RawMessage `json:"ivms101"`
+	ID        uuid.UUID       `json:"id,omitzero"`
+	Name      string          `json:"name,omitempty"`
+	Email     string          `json:"email,omitempty"`
+	Role      string          `json:"role,omitempty"`
+	IVMS101   json.RawMessage `json:"ivms101,omitempty"`
 	CompanyID uuid.UUID       `json:"company_id,omitzero"`
-	Created   time.Time       `json:"created"`
-	Modified  time.Time       `json:"modified"`
+	Created   time.Time       `json:"created,omitzero"`
+	Modified  time.Time       `json:"modified,omitzero"`
 }
 
 func NewContact(model *db.Contact) *Contact {

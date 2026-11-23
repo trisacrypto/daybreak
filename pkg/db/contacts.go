@@ -137,6 +137,7 @@ func (tx *Tx) UpdateContact(contact *Contact) (err error) {
 const (
 	deleteContactSQL         = `DELETE FROM contacts WHERE id=:id;`
 	deletedContactCompanySQL = `SELECT company_id FROM contacts WHERE id=:id;`
+	markContactDeletedSQL    = `INSERT INTO deleted_contacts (id, company_id, modified) VALUES (:id, :companyID, :modified);`
 )
 
 func (tx *Tx) DeleteContact(id uuid.UUID) (err error) {
@@ -155,6 +156,10 @@ func (tx *Tx) DeleteContact(id uuid.UUID) (err error) {
 			return err
 		}
 		return errors.ErrNotFound
+	}
+
+	if _, err = tx.Exec(markContactDeletedSQL, sql.Named("id", id), sql.Named("companyID", companyID), sql.Named("modified", fields.TimeNow())); err != nil {
+		return err
 	}
 
 	// When contacts are created, update the modified timestamp for the company and the database.
