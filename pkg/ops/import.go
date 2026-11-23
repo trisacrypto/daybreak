@@ -286,8 +286,6 @@ func (i *ZipImporter) Contacts(contacts <-chan *db.Contact) (err error) {
 	return i.Check()
 }
 
-// For a zip import the primary contacts are ignored since they are stored in the
-// Company file as part of the company JSON data.
 func (i *ZipImporter) PrimaryContacts(primaryContacts <-chan *db.PrimaryContact) (err error) {
 	var f io.Writer
 	if f, err = i.zw.Create(primaryContactsFile); err != nil {

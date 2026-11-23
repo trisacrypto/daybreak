@@ -51,7 +51,7 @@ func (e *DatabaseExporter) Open(ctx context.Context, errc chan<- error) (err err
 		e.tx = nil
 	}
 
-	if e.tx, err = e.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true, Isolation: sql.LevelSerializable}); err != nil {
+	if e.tx, err = e.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true}); err != nil {
 		return err
 	}
 
@@ -129,6 +129,10 @@ func dbExport[T any, M db.Model[T]](ctx context.Context, C chan<- M, E chan<- er
 		case C <- model:
 			continue
 		}
+	}
+
+	if err := iter.Err(); err != nil {
+		E <- err
 	}
 }
 
