@@ -33,6 +33,18 @@ func (c *Contact) Scan(scanner Scanner) error {
 	)
 }
 
+type PrimaryContact struct {
+	CompanyID uuid.UUID `json:"company_id"`
+	ContactID uuid.UUID `json:"contact_id"`
+}
+
+func (p *PrimaryContact) Scan(scanner Scanner) error {
+	return scanner.Scan(
+		&p.CompanyID,
+		&p.ContactID,
+	)
+}
+
 //============================================================================
 // Transaction CRUD
 //============================================================================
@@ -55,6 +67,16 @@ func (tx *Tx) ListCompanyContacts(companyID uuid.UUID) (contacts *Iterator[Conta
 		return nil, err
 	}
 	return Iterate[Contact](rows), nil
+}
+
+const listPrimaryContactSQL = `SELECT id, primary_contact_id FROM companies WHERE primary_contact_id IS NOT NULL;`
+
+func (tx *Tx) ListPrimaryContacts() (primaryContacts *Iterator[PrimaryContact, *PrimaryContact], err error) {
+	var rows *sql.Rows
+	if rows, err = tx.Query(listPrimaryContactSQL); err != nil {
+		return nil, err
+	}
+	return Iterate[PrimaryContact](rows), nil
 }
 
 const createContactSQL = `INSERT INTO contacts

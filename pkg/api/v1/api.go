@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/trisacrypto/daybreak/pkg/db"
 	"go.rtnl.ai/ulid"
 	"go.rtnl.ai/x/validation"
 )
@@ -43,6 +44,11 @@ type StatusReply struct {
 	Status  string `json:"status"`
 	Uptime  string `json:"uptime,omitempty"`
 	Version string `json:"version,omitempty"`
+}
+
+type Models[D any, T any, M db.Model[T]] interface {
+	*D
+	Model() M
 }
 
 type DTO struct {
