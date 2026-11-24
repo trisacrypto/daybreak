@@ -1,3 +1,69 @@
+import Alerts from '../modules/alerts.js';
+import { clearFormErrors, markFormErrors } from '../modules/forms.js';
+
+/**************************************************
+ * Create Counterparty Handling
+ **************************************************/
+
+const createEntryForm = document.getElementById('createEntryForm');
+
+if (createEntryForm) {
+  const createEntryAlerts = new Alerts(document.getElementById('createEntryAlerts'), { dismissible: true, autoClose: true });
+  createEntryForm.addEventListener('htmx:afterRequest', function(e) {
+    clearFormErrors(createEntryForm);
+    createEntryAlerts.clear();
+
+    if (e.detail.successful) {
+      createEntryForm.reset();
+      createEntryAlerts.success('', 'Counterparty successfully created.', { dismissible: true, autoClose: true });
+    } else {
+      markFormErrors(createEntryForm, e, createEntryAlerts);
+    }
+  });
+
+  // Reset state when the modal is closed.
+  const createEntryModal = document.getElementById('createEntryModal');
+  createEntryModal.addEventListener('hidden.bs.modal', function() {
+    createEntryForm.reset();
+    clearFormErrors(createEntryForm);
+    createEntryAlerts.clear();
+  });
+}
+
+/**************************************************
+ * Create License Handling
+ **************************************************/
+
+
+const createLicenseForm = document.getElementById('createLicenseForm');
+
+if (createLicenseForm) {
+  const createLicenseAlerts = new Alerts(document.getElementById('createLicenseAlerts'), { dismissible: true, autoClose: true });
+  createLicenseForm.addEventListener('htmx:afterRequest', function(e) {
+    clearFormErrors(createLicenseForm);
+    createLicenseAlerts.clear();
+
+    if (e.detail.successful) {
+      createLicenseForm.reset();
+      createLicenseAlerts.success('', 'License key successfully issued.', { dismissible: true, autoClose: true });
+    } else {
+      markFormErrors(createLicenseForm, e, createLicenseAlerts);
+    }
+  });
+
+  // Reset state when the modal is closed.
+  const createLicenseModal = document.getElementById('createLicenseModal');
+  createLicenseModal.addEventListener('hidden.bs.modal', function() {
+    createLicenseForm.reset();
+    clearFormErrors(createLicenseForm);
+    createLicenseAlerts.clear();
+  });
+}
+
+/**************************************************
+ * Countries Choropleth Chart
+ **************************************************/
+
 const fetchJSON = (url) => {
   return fetch(url).then((response) => {
     if (!response.ok) {

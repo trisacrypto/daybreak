@@ -5,17 +5,21 @@
 
 {{- define "header-actions" }}
 {{- if not .IsViewOnly }}
-<button disabled class="btn btn-primary ms-2 lift" data-bs-toggle="modal" data-bs-target="#createEntryModal">
-  <i class="fe fe-plus"></i> Add Entry
+<button class="btn btn-primary ms-2 lift" data-bs-toggle="modal" data-bs-target="#createEntryModal" title="Add Counterparty">
+  <i class="fe fe-plus-square"></i> <span class="d-none d-md-inline ps-1">Add Entry</span>
 </button>
-<a href="/v1/download" class="btn btn-info ms-2 lift">
-  <i class="fe fe-download-cloud"></i> Download
+<button class="btn btn-info ms-2 lift" data-bs-toggle="modal" data-bs-target="#createLicenseModal" title="New License">
+  <i class="fe fe-user-plus"></i> <span class="d-none d-md-inline ps-1">New License</span>
+</button>
+<a href="/v1/download" class="btn btn-light ms-2 lift" title="Download Dataset">
+  <i class="fe fe-download-cloud"></i> <span class="d-none d-md-inline ps-1">Download</span>
 </a>
 {{- end }}
 {{- end }}
 
 {{- define "modals" }}
 {{ template "createEntryModal" . }}
+{{ template "createLicenseModal" . }}
 {{- end }}
 
 {{- define "alerts" }}
@@ -24,7 +28,7 @@
 
 {{- define "main" }}
 <!-- Info Cards -->
-<section id="infoCards" hx-get="/v1/dashboard/info" hx-trigger="load" hx-swap="innerHTML">
+<section id="infoCards" hx-get="/v1/dashboard/info" hx-trigger="load, company-created from:body, license-created from:body" hx-swap="innerHTML">
   <div class="card">
     <div class="card-body text-center">
       <div class="spinner-border" role="status">
@@ -68,7 +72,7 @@
           Recent Counterparties
         </h4>
       </div>
-      <div hx-get="/v1/dashboard/counterparties" hx-trigger="load" hx-swap="innerHTML">
+      <div hx-get="/v1/dashboard/counterparties" hx-trigger="load, company-created from:body" hx-swap="innerHTML">
         <div class="card-body text-center">
           <div class="spinner-border" role="status">
             <span class="visually-hidden">Loading...</span>
@@ -85,7 +89,7 @@
           Recent Licenses
         </h4>
       </div>
-      <div hx-get="/v1/dashboard/licenses" hx-trigger="load" hx-swap="innerHTML">
+      <div hx-get="/v1/dashboard/licenses" hx-trigger="load, license-created from:body" hx-swap="innerHTML">
         <div class="card-body text-center">
           <div class="spinner-border" role="status">
             <span class="visually-hidden">Loading...</span>
