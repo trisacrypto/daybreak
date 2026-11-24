@@ -14,7 +14,6 @@ var (
 	// Store/Database Errors
 	ErrInvalidDSN           = errors.New("invalid database DSN")
 	ErrDatabase             = errors.New("database error")
-	ErrSQLiteForeignKeys    = errors.New("could not enable sqlite foreign keys")
 	ErrSQLiteQueryOnly      = errors.New("could not set sqlite to query_only mode")
 	ErrReadOnly             = errors.New("cannot perform operation in read-only mode")
 	ErrMissingAssociation   = errors.New("associated record(s) not cached on model")

@@ -26,6 +26,7 @@ const (
 	UserInfoKey    = "userinfo"
 	PermissionsKey = "permissions"
 	UserSessionKey = "user"
+	LicenseIDKey   = "license"
 
 	OAuthStateKey = "oauth_state"
 	OAuthStateTTL = 20 * time.Minute
@@ -132,7 +133,10 @@ func LicenseRequired(store TokenIdentifier) gin.HandlerFunc {
 		}
 
 		// Retrieve the license from the database.
-		if license, err = store.RetrieveLicense(c.Request.Context(), clientID); err != nil {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 4*time.Second)
+		defer cancel()
+
+		if license, err = store.RetrieveLicense(ctx, clientID); err != nil {
 			if errors.Is(err, errors.ErrNotFound) {
 				c.AbortWithStatusJSON(http.StatusUnauthorized, Unauthorized)
 				return
@@ -197,8 +201,16 @@ func LicenseRequired(store TokenIdentifier) gin.HandlerFunc {
 
 		c.Header(ServerAuthorization, responseAuth)
 
+		// Record that the license was successfully accessed.
+		if err = store.LicenseAccessed(ctx, license.ID); err != nil {
+			c.Error(fmt.Errorf("failed to record license access: %w", err))
+			c.AbortWithStatusJSON(http.StatusInternalServerError, InternalError)
+			return
+		}
+
 		// The request is authenticated and the license is valid; so set the permissions
 		// NOTE: permissions must be a []string or GetPermissions will panic.
+		c.Set(LicenseIDKey, license.ID)
 		c.Set(PermissionsKey, []string(license.Permissions))
 		c.Next()
 	}
@@ -228,6 +240,7 @@ func LoginRequired(c *gin.Context) {
 
 type TokenIdentifier interface {
 	RetrieveLicense(ctx context.Context, id ulid.ULID) (license *db.License, err error)
+	LicenseAccessed(ctx context.Context, id ulid.ULID) (err error)
 }
 
 // Returns the user that LoginRequired set on the context or nil if there is no user,
@@ -265,6 +278,14 @@ func GetPermissions(c *gin.Context) []string {
 	default:
 		panic(fmt.Errorf("unexpected permissions type on context: %T", val))
 	}
+}
+
+func GetLicenseID(c *gin.Context) ulid.ULID {
+	val, ok := c.Get(LicenseIDKey)
+	if !ok {
+		return ulid.ULID{}
+	}
+	return val.(ulid.ULID)
 }
 
 func StateCookie(c *gin.Context) string {

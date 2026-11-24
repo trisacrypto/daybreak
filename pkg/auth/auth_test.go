@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -85,7 +87,7 @@ var testLicenses = map[ulid.ULID]*db.License{
 
 func TestAuthMiddleware(t *testing.T) {
 	// Create a test server
-	store := &TestTokenIdentifier{licenses: testLicenses}
+	store := &TestTokenIdentifier{licenses: testLicenses, accesses: make(map[ulid.ULID]int)}
 	router := gin.New()
 	router.Use(sessions.Sessions(sessionName, cookie.NewStore(makeSecret())))
 
@@ -162,6 +164,117 @@ func TestAuthMiddleware(t *testing.T) {
 				require.Nil(t, identity.User, "expected no user for the %s license", license.Name)
 				require.Equal(t, []string(license.Permissions), identity.Permissions, "unexpected permissions for the %s license", license.Name)
 			}
+		})
+	})
+
+	t.Run("LicenseAccessed", func(t *testing.T) {
+		// Asserts that exactly one access was recorded for each of the licenses since
+		// the accesses were counted, and that none were recorded for any other license.
+		requireAccessed := func(t *testing.T, before map[string]int, accessed ...ulid.ULID) {
+			t.Helper()
+			expected := maps.Clone(before)
+			for _, clientID := range accessed {
+				expected[clientID.String()]++
+			}
+			require.Equal(t, expected, store.Accesses(), "unexpected license accesses recorded")
+		}
+
+		t.Run("Authenticated", func(t *testing.T) {
+			// The access is recorded for the license that signed the request, and only
+			// for that license, every time that a request is authenticated.
+			for _, clientID := range []ulid.ULID{adminID, envoyID, noPermissionsID, wildcardID} {
+				t.Run(testLicenses[clientID].Name, func(t *testing.T) {
+					for range 2 {
+						before := store.Accesses()
+						rep := do(t, signed(t, http.MethodGet, "/counterparties", clientID))
+						require.Equal(t, http.StatusOK, rep.StatusCode)
+						requireAccessed(t, before, clientID)
+					}
+				})
+			}
+		})
+
+		t.Run("NotPermitted", func(t *testing.T) {
+			// The license is authenticated before its permissions are checked, so the
+			// access is recorded even if the license is not permitted to use the route.
+			before := store.Accesses()
+			rep := do(t, signed(t, http.MethodPost, "/counterparties", envoyID))
+			require.Equal(t, http.StatusForbidden, rep.StatusCode)
+			requireAccessed(t, before, envoyID)
+		})
+
+		t.Run("NotAuthenticated", func(t *testing.T) {
+			// No access is recorded for a request that the middleware rejects, whether
+			// or not the license that it claims to be from exists.
+			tests := []struct {
+				name   string
+				status int
+				modify func(t *testing.T, req *http.Request)
+			}{
+				{"NotAcceptable", http.StatusNotAcceptable, func(t *testing.T, req *http.Request) {
+					req.Header.Set("Accept", "text/plain")
+				}},
+				{"MissingHeader", http.StatusBadRequest, func(t *testing.T, req *http.Request) {
+					req.Header.Del(XTimestamp)
+				}},
+				{"OutsideWindow", http.StatusUnauthorized, func(t *testing.T, req *http.Request) {
+					req.Header.Set(XTimestamp, time.Now().Add(-HawkWindow-time.Minute).Format(time.RFC3339))
+					resign(t, req, envoyID)
+				}},
+				{"MalformedToken", http.StatusUnauthorized, func(t *testing.T, req *http.Request) {
+					req.Header.Set(Authorization, "Bearer testing")
+				}},
+				{"UnsignedHeaders", http.StatusUnauthorized, func(t *testing.T, req *http.Request) {
+					require.NoError(t, signTestRequest(req, envoyID.String(), testLicenses[envoyID].Secret, XTimestamp))
+				}},
+				{"UnknownLicense", http.StatusUnauthorized, func(t *testing.T, req *http.Request) {
+					require.NoError(t, signTestRequest(req, ulid.Make().String(), testLicenses[envoyID].Secret))
+				}},
+				{"WrongSecret", http.StatusUnauthorized, func(t *testing.T, req *http.Request) {
+					require.NoError(t, signTestRequest(req, envoyID.String(), makeSecret()))
+				}},
+				{"ExpiredLicense", http.StatusForbidden, func(t *testing.T, req *http.Request) {
+					require.NoError(t, signTestRequest(req, expiredID.String(), testLicenses[expiredID].Secret))
+				}},
+				{"InvalidRequestID", http.StatusBadRequest, func(t *testing.T, req *http.Request) {
+					req.Header.Set(XRequestID, "not-a-request-id")
+					resign(t, req, envoyID)
+				}},
+			}
+
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					before := store.Accesses()
+					req := signed(t, http.MethodGet, "/counterparties", envoyID)
+					tc.modify(t, req)
+
+					require.Equal(t, tc.status, do(t, req).StatusCode)
+					requireAccessed(t, before)
+				})
+			}
+		})
+
+		t.Run("Replayed", func(t *testing.T) {
+			// Only the original request is recorded as an access, not its replays.
+			before := store.Accesses()
+			req := signed(t, http.MethodGet, "/counterparties", envoyID)
+			require.Equal(t, http.StatusOK, do(t, req).StatusCode)
+
+			for range 2 {
+				require.Equal(t, http.StatusUnauthorized, do(t, req.Clone(req.Context())).StatusCode)
+			}
+			requireAccessed(t, before, envoyID)
+		})
+
+		t.Run("NotRecorded", func(t *testing.T) {
+			// The request does not reach the handler if the access cannot be recorded.
+			store.FailAccesses(fmt.Errorf("could not record license access"))
+			t.Cleanup(func() { store.FailAccesses(nil) })
+
+			before := store.Accesses()
+			rep := do(t, signed(t, http.MethodGet, "/counterparties", envoyID))
+			requireReply(t, rep, http.StatusInternalServerError, InternalError)
+			requireAccessed(t, before)
 		})
 	})
 
@@ -243,10 +356,14 @@ func TestAuthMiddleware(t *testing.T) {
 				{http.MethodGet, "/daybreak"},
 			}
 
+			accesses := store.Accesses()
 			for _, tc := range tests {
 				rep := execute(t, browser, html(t, tc.method, tc.path))
 				require.Equal(t, http.StatusOK, rep.StatusCode, "expected %s %s to be allowed", tc.method, tc.path)
 			}
+
+			// A session is not a license, so no license access is recorded for it.
+			require.Equal(t, accesses, store.Accesses(), "expected no license access to be recorded for a session")
 		})
 
 		t.Run("Identity", func(t *testing.T) {
@@ -812,6 +929,12 @@ func TestGetUserInfo(t *testing.T) {
 type TestTokenIdentifier struct {
 	licenses map[ulid.ULID]*db.License
 	calls    atomic.Int64
+
+	// Accesses are recorded by the server while it handles a request and are read by
+	// the tests, so the fields below must only be used while holding the lock.
+	mu        sync.Mutex
+	accesses  map[ulid.ULID]int
+	accessErr error
 }
 
 func (t *TestTokenIdentifier) RetrieveLicense(ctx context.Context, id ulid.ULID) (license *db.License, _ error) {
@@ -822,6 +945,41 @@ func (t *TestTokenIdentifier) RetrieveLicense(ctx context.Context, id ulid.ULID)
 		return nil, errors.ErrNotFound
 	}
 	return license, nil
+}
+
+func (t *TestTokenIdentifier) LicenseAccessed(ctx context.Context, id ulid.ULID) (err error) {
+	t.calls.Add(1)
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if t.accessErr != nil {
+		return t.accessErr
+	}
+
+	t.accesses[id]++
+	return nil
+}
+
+// Returns a copy of the number of accesses that have been recorded for each license,
+// keyed by the string of the license ID so that test failures are readable.
+func (t *TestTokenIdentifier) Accesses() map[string]int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	accesses := make(map[string]int, len(t.accesses))
+	for id, count := range t.accesses {
+		accesses[id.String()] = count
+	}
+	return accesses
+}
+
+// Causes LicenseAccessed to return the error instead of recording the access, until
+// it is called again with nil.
+func (t *TestTokenIdentifier) FailAccesses(err error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.accessErr = err
 }
 
 //============================================================================

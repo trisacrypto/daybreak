@@ -106,6 +106,10 @@ func (s *Server) setupRoutes() (err error) {
 	// Authenticated API Routes
 	v1a := s.router.Group("/v1", auth.Authenticate(s))
 	{
+		// Sync and Download endpoints
+		v1a.GET("/sync", auth.EnvoyUser, Wrap("api.daybreak.sync", s.DaybreakSync))
+		v1a.GET("/download", auth.EnvoyDownload, Wrap("api.daybreak.download", s.DaybreakDownload))
+
 		// Companies Resource
 		v1a.GET("/companies", auth.EnvoyUser, Wrap("api.companies.list", s.ListCompanies))
 		v1a.POST("/companies", auth.DaybreakContributor, Wrap("api.companies.create", s.CreateCompany))

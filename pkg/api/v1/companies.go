@@ -38,9 +38,6 @@ type Company struct {
 	// Contacts may be supplied on create to atomically create the company and its
 	// initial contacts; the first contact becomes the company's primary contact.
 	Contacts []*Contact `json:"contacts,omitempty"`
-
-	// Deleted contacts are returned on sync operations.
-	DeletedContacts []*Contact `json:"deleted_contacts,omitempty"`
 }
 
 func NewCompany(model *db.Company) *Company {
@@ -175,10 +172,6 @@ func (c *Company) Validate(method string) (err error) {
 				err = validation.Error(err, validation.Invalid("contacts", child.Error()).Index(i))
 			}
 		}
-	}
-
-	if len(c.DeletedContacts) > 0 {
-		err = validation.Error(err, validation.ReadOnly("deleted_contacts"))
 	}
 	return err
 }
