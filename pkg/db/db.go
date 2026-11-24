@@ -3,9 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
-	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/trisacrypto/daybreak/pkg/errors"
@@ -67,7 +65,7 @@ func Open(uri *dsn.DSN) (_ *DB, err error) {
 
 	// Open the database connection.
 	db := &DB{uri: uri, readonly: uri.ReadOnly()}
-	if db.DB, err = sql.Open(dsn.SQLite, fileURI(uri)); err != nil {
+	if db.DB, err = sql.Open(dsn.SQLite, uri.FileURI()); err != nil {
 		return nil, err
 	}
 
@@ -192,22 +190,4 @@ func dbe(err error) error {
 	}
 
 	return errors.Join(errors.ErrDatabase, err)
-}
-
-// TODO: move to go.rtnl.ai/x/dsn
-func fileURI(uri *dsn.DSN) string {
-	if len(uri.Options) > 0 {
-		query := make(url.Values)
-		for k, v := range uri.Options {
-			query.Add(k, v)
-		}
-
-		if strings.HasPrefix(uri.Path, "/") {
-			return "file://" + uri.Path + "?" + query.Encode()
-		}
-
-		return "file:" + uri.Path + "?" + query.Encode()
-	}
-
-	return uri.Path
 }
