@@ -1,6 +1,7 @@
 import  Alerts from '../modules/alerts.js';
 import { isRequestMatch } from '../htmx/helpers.js';
 import { createList, createPageSizeSelect } from '../modules/components.js';
+import { clearFormErrors, markFormErrors } from '../modules/forms.js';
 
 const pageAlerts = new Alerts(document.querySelector('.pageAlerts'), { dismissible: true, autoClose: true });
 
@@ -16,24 +17,6 @@ document.addEventListener("htmx:afterSettle", function(e) {
   const pageSizeSelect = document.getElementById('pageSizeSelect');
   createPageSizeSelect(pageSizeSelect, list);
 });
-
-function clearFormErrors(form) {
-  form.querySelectorAll('.is-invalid').forEach((el) => {
-    el.classList.remove('is-invalid');
-    const feedback = el.parentElement.querySelector('.invalid-feedback');
-    if (feedback) feedback.textContent = '';
-  });
-}
-
-// Marks the input matching the API field name as invalid.
-function markFieldError(form, field, message) {
-  const el = form.querySelector(`[name="${field}"]`);
-  if (!el) return false;
-  el.classList.add('is-invalid');
-  const feedback = el.parentElement.querySelector('.invalid-feedback');
-  if (feedback) feedback.textContent = message;
-  return true;
-}
 
 // Create License Form
 const createModal = document.getElementById('createLicenseModal');
@@ -54,30 +37,8 @@ if (createForm) {
       return;
     }
 
-    // Parse the JSON error reply returned for HTMX requests.
-    let reply = null;
-    try {
-      reply = JSON.parse(e.detail.xhr.responseText);
-    } catch (_) {
-      reply = null;
-    }
-
-    const message = (reply && reply.error) || `Request failed with status ${e.detail.xhr.status}`;
-    const unmatched = [];
-    if (reply && Array.isArray(reply.error_detail)) {
-      reply.error_detail.forEach((d) => {
-        if (!markFieldError(createForm, d.field, d.error)) {
-          unmatched.push(d.error);
-        }
-      });
-    }
-
-    if (unmatched.length > 0) {
-      body = `<p class="m-0 p-0"><strong>${message}</strong></p><ul class="mb-0 mt-2">${unmatched.map((d) => `<li>${d}</li>`).join('')}</ul>`;
-      createAlerts.content(body, { level: 'danger', dismissible: true, autoClose: true });
-    } else {
-      createAlerts.danger("Error: ", message);
-    }
+    // This is an error response so mark the form errors and display the alerts.
+    markFormErrors(createForm, e, createAlerts);
   });
 
   // Reset state when the modal is closed.
