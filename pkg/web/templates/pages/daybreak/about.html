@@ -6,7 +6,7 @@
 {{- define "main" }}
 <!-- Cards -->
 <div class="row">
-  <div class="col-12 col-lg-6 col-xl">
+  <div class="col-12 col-md-6 col-lg-4">
 
     <!-- Version  -->
     <div class="card">
@@ -21,7 +21,7 @@
 
             <!-- Heading -->
             <span class="h2 mb-0">
-              {{ .Version }}
+              {{ .ShortVersion }}
             </span>
 
           </div>
@@ -36,7 +36,39 @@
     </div>
 
   </div>
-  <div class="col-12 col-lg-6 col-xl">
+
+  <div class="col-12 col-md-6 col-lg-4">
+
+    <!-- Revision  -->
+    <div class="card">
+      <div class="card-body">
+        <div class="row align-items-center gx-0">
+          <div class="col">
+
+            <!-- Title -->
+            <h6 class="text-uppercase text-body-secondary mb-2">
+              Revision
+            </h6>
+
+            <!-- Heading -->
+            <span class="h2 mb-0">
+              {{ .Revision }}
+            </span>
+
+          </div>
+          <div class="col-auto">
+
+            <!-- Icon -->
+            <span class="h2 fe fe-git-branch text-body-secondary mb-0"></span>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col-12 col-md-6 col-lg-4">
 
     <!-- Hours -->
     <div class="card">
@@ -67,7 +99,7 @@
 
   </div>
 
-  <div class="col-12 col-lg-6 col-xl">
+  <div class="col-12 col-md-6 col-lg-4">
 
     <!-- Uptime -->
     <div class="card">
@@ -90,6 +122,72 @@
 
             <!-- Icon -->
             <span class="h2 fe fe-clock text-body-secondary mb-0"></span>
+
+          </div>
+        </div> <!-- / .row -->
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col-12 col-md-6 col-lg-4">
+
+    <!-- Build Date -->
+    <div class="card">
+      <div class="card-body">
+        <div class="row align-items-center gx-0">
+          <div class="col">
+
+            <!-- Title -->
+            <h6 class="text-uppercase text-body-secondary mb-2">
+              Build Date
+            </h6>
+
+            <!-- Heading -->
+            <span class="h2 mb-0">
+              {{ if .BuildDate }}{{ .BuildDate }}{{ else }}&mdash;{{ end }}
+            </span>
+
+          </div>
+          <div class="col-auto">
+
+            <!-- Icon -->
+            <span class="h2 fe fe-calendar text-body-secondary mb-0"></span>
+
+          </div>
+        </div> <!-- / .row -->
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col-12 col-md-6 col-lg-4">
+
+    <!-- Last Modified -->
+    <div class="card">
+      <div class="card-body">
+        <div class="row align-items-center gx-0">
+          <div class="col">
+
+            <!-- Title -->
+            <h6 class="text-uppercase text-body-secondary mb-2">
+              Last Modified
+            </h6>
+
+            <!-- Heading -->
+            <span class="h2 mb-0">
+              {{- if not .LastModified.IsZero }}
+              <time datetime="{{ .LastModified | rfc3339 }}">{{ .LastModified | moment }}</time>
+              {{- else }}
+              &mdash;
+              {{- end }}
+            </span>
+
+          </div>
+          <div class="col-auto">
+
+            <!-- Icon -->
+            <span class="h2 fe fe-edit-3 text-body-secondary mb-0"></span>
 
           </div>
         </div> <!-- / .row -->

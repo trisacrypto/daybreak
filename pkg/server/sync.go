@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -12,15 +13,20 @@ import (
 	"github.com/trisacrypto/daybreak/pkg/auth"
 	"github.com/trisacrypto/daybreak/pkg/db"
 	"github.com/trisacrypto/daybreak/pkg/errors"
+	"github.com/trisacrypto/daybreak/pkg/ops"
 	"go.rtnl.ai/ulid"
 	"go.rtnl.ai/x/rlog"
 )
 
 const (
-	HeaderIfModifiedSince = "If-Modified-Since"
-	HeaderCacheControl    = "Cache-Control"
-	CacheControlValue     = "private, no-store"
-	HeaderLastModified    = "Last-Modified"
+	HeaderIfModifiedSince    = "If-Modified-Since"
+	HeaderCacheControl       = "Cache-Control"
+	CacheControlValue        = "private, no-store"
+	HeaderLastModified       = "Last-Modified"
+	HeaderContentType        = "Content-Type"
+	ContentTypeValue         = "application/zip"
+	HeaderContentDisposition = "Content-Disposition"
+	ContentDispositionValue  = `attachment; filename="daybreak-%s.zip"`
 )
 
 // Returns a list of the modified and deleted companies and contacts since the client's
@@ -33,7 +39,7 @@ func (s *Server) DaybreakSync(ctx context.Context, c *gin.Context) *errors.HTTP 
 		err          error
 		lastSync     time.Time
 		lastModified time.Time
-		out          *api.SyncResponse
+		out          *api.SyncReply
 	)
 
 	// Record the start time of the sync operation to be used as a fallback for
@@ -65,7 +71,7 @@ func (s *Server) DaybreakSync(ctx context.Context, c *gin.Context) *errors.HTTP 
 		lastModified = syncStart
 	}
 
-	out = &api.SyncResponse{
+	out = &api.SyncReply{
 		LastModified: lastModified,
 	}
 
@@ -155,7 +161,7 @@ func (s *Server) DaybreakDownload(ctx context.Context, c *gin.Context) *errors.H
 	// impact of this is minimal since the download operation is the entire database
 	// and does not depend on the last modified timestamp.
 	if lastModified, err = s.db.LastModifiedHTTP(ctx); err != nil {
-		return api.Error(http.StatusInternalServerError, err, "could not begin sync operation")
+		return api.Error(http.StatusInternalServerError, err, "could not begin download operation")
 	}
 
 	if lastSync, ok = ifModifiedSince(c); ok {
@@ -175,7 +181,22 @@ func (s *Server) DaybreakDownload(ctx context.Context, c *gin.Context) *errors.H
 		lastModified = syncStart
 	}
 
+	// Compute the attachment filename from the last modified timestamp.
+	contentDisposition := fmt.Sprintf(ContentDispositionValue, lastModified.Format("20060102150405"))
+
+	// Add cache-control headers to the response.
+	c.Header(HeaderLastModified, lastModified.Format(http.TimeFormat))
+	c.Header(HeaderCacheControl, CacheControlValue)
+	c.Header(HeaderContentType, ContentTypeValue)
+	c.Header(HeaderContentDisposition, contentDisposition)
+
 	// Begin the daybreak download operation.
+	if err = ops.Download(ctx, c, s.db); err != nil {
+		// Since the 200 status has already been sent we can't send a 500 status code.
+		// So instead we abort the request to indicate to the client that the download failed.
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return api.Error(http.StatusInternalServerError, err, "could not complete download operation")
+	}
 
 	// Send a message to the access writer to update the downloads counter.
 	licenseID := auth.GetLicenseID(c)
@@ -183,10 +204,6 @@ func (s *Server) DaybreakDownload(ctx context.Context, c *gin.Context) *errors.H
 		go s.updateDownloads(licenseID)
 	}
 
-	// Add cache-control headers to the response.
-	c.Header(HeaderLastModified, lastModified.Format(http.TimeFormat))
-	c.Header(HeaderCacheControl, CacheControlValue)
-	c.JSON(http.StatusOK, gin.H{"lastModified": lastModified})
 	return nil
 }
 

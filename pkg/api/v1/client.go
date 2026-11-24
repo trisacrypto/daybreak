@@ -9,10 +9,13 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/trisacrypto/daybreak/pkg"
+	"github.com/trisacrypto/daybreak/pkg/errors"
 	"go.rtnl.ai/ulid"
 )
 
@@ -85,6 +88,120 @@ func (c *APIv1) Status(ctx context.Context) (out *StatusReply, err error) {
 		return nil, fmt.Errorf("could not deserialize response: %w", err)
 	}
 	return out, nil
+}
+
+//============================================================================
+// Sync and Download
+//============================================================================
+
+const syncEP = "/v1/sync"
+
+func (c *APIv1) Sync(ctx context.Context, ifModifiedSince time.Time) (out *SyncReply, lastModified time.Time, err error) {
+	var req *http.Request
+	if req, err = c.NewRequest(ctx, http.MethodGet, syncEP, nil); err != nil {
+		return nil, time.Time{}, err
+	}
+
+	req.Header.Set("Cache-Control", "no-cache")
+	if !ifModifiedSince.IsZero() {
+		req.Header.Set("If-Modified-Since", ifModifiedSince.UTC().Format(http.TimeFormat))
+	}
+
+	out = &SyncReply{}
+
+	var rep *http.Response
+	rep, err = c.Do(req, out, true)
+
+	if rep != nil {
+		lastModified, _ = time.Parse(http.TimeFormat, rep.Header.Get("Last-Modified"))
+	}
+
+	if err != nil {
+		return nil, lastModified, err
+	}
+	return out, lastModified, nil
+}
+
+const downloadEP = "/v1/download"
+
+func (c *APIv1) Download(ctx context.Context, ifModifiedSince time.Time, w io.Writer) (lastModified time.Time, err error) {
+	var req *http.Request
+	if req, err = c.NewRequest(ctx, http.MethodGet, downloadEP, nil); err != nil {
+		return time.Time{}, err
+	}
+
+	req.Header.Set("Accept", "application/zip")
+	req.Header.Set("Cache-Control", "no-cache")
+	if !ifModifiedSince.IsZero() {
+		req.Header.Set("If-Modified-Since", ifModifiedSince.UTC().Format(http.TimeFormat))
+	}
+
+	// NOTE: c.Do closes the response body, so the request is sent directly in order
+	// to stream the body of the response to the writer.
+	var rep *http.Response
+	if rep, err = c.client.Do(req); err != nil {
+		return time.Time{}, fmt.Errorf("could not send request: %s", err)
+	}
+	defer rep.Body.Close()
+
+	lastModified, _ = time.Parse(http.TimeFormat, rep.Header.Get("Last-Modified"))
+	if err = c.checkStatus(rep); err != nil {
+		return lastModified, err
+	}
+
+	_, err = io.Copy(w, rep.Body)
+	return lastModified, err
+}
+
+func (c *APIv1) DownloadTo(ctx context.Context, lastModified time.Time, dir string) (err error) {
+	var req *http.Request
+	if req, err = c.NewRequest(ctx, http.MethodGet, downloadEP, nil); err != nil {
+		return err
+	}
+
+	req.Header.Set("Accept", "application/zip")
+	req.Header.Set("Cache-Control", "no-cache")
+	if !lastModified.IsZero() {
+		req.Header.Set("If-Modified-Since", lastModified.UTC().Format(http.TimeFormat))
+	}
+
+	// NOTE: c.Do closes the response body, so the request is sent directly in order
+	// to stream the body of the response to the file.
+	var rep *http.Response
+	if rep, err = c.client.Do(req); err != nil {
+		return fmt.Errorf("could not send request: %s", err)
+	}
+	defer rep.Body.Close()
+
+	if err = c.checkStatus(rep); err != nil {
+		return err
+	}
+
+	var params map[string]string
+	if _, params, err = mime.ParseMediaType(rep.Header.Get("Content-Disposition")); err != nil {
+		return fmt.Errorf("could not parse content-disposition header: %w", err)
+	}
+
+	// cSpell:ignore fname
+	fname, ok := params["filename"]
+	if !ok || fname == "" {
+		return errors.New("no filename in content-disposition header")
+	}
+
+	// Never trust a server-supplied path: strip any directory components
+	fname = filepath.Base(fname)
+	path := filepath.Join(dir, fname)
+
+	var f *os.File
+	if f, err = os.Create(path); err != nil {
+		return fmt.Errorf("could not create file: %w", err)
+	}
+	defer f.Close()
+
+	if _, err = io.Copy(f, rep.Body); err != nil {
+		return fmt.Errorf("could not copy file: %w", err)
+	}
+	return nil
 }
 
 //============================================================================
@@ -377,33 +494,46 @@ func (c *APIv1) Do(req *http.Request, out any, checkStatus bool) (rep *http.Resp
 	defer rep.Body.Close()
 
 	if checkStatus {
-		if rep.StatusCode < 200 || rep.StatusCode >= 300 {
-			serr := &StatusError{
-				Code:  rep.StatusCode,
-				Reply: &Reply{},
-			}
-
-			if mediatype, _, err := mime.ParseMediaType(rep.Header.Get("Content-Type")); err == nil {
-				switch mediatype {
-				case "application/json":
-					json.NewDecoder(rep.Body).Decode(serr.Reply)
-				case "text/plain":
-					data, _ := io.ReadAll(rep.Body)
-					serr.Reply.Error = string(data)
-				}
-			}
-
-			if serr.Reply.Error == "" {
-				serr.Reply.Error = http.StatusText(rep.StatusCode)
-			}
-			return rep, serr
+		if err = c.checkStatus(rep); err != nil {
+			return rep, err
 		}
 	}
 
 	if out != nil && rep.StatusCode >= 200 && rep.StatusCode < 300 {
 		if err = json.NewDecoder(rep.Body).Decode(out); err != nil {
-			return nil, fmt.Errorf("could not deserialize response: %s", err)
+			return rep, fmt.Errorf("could not deserialize response: %s", err)
 		}
 	}
 	return rep, nil
+}
+
+// Returns ErrNotModified for a 304 response and a StatusError for any other non-2xx
+// response; the error reply is read from the response body but the body is not closed.
+func (c *APIv1) checkStatus(rep *http.Response) error {
+	if rep.StatusCode == http.StatusNotModified {
+		return errors.ErrNotModified
+	}
+
+	if rep.StatusCode < 200 || rep.StatusCode >= 300 {
+		serr := &StatusError{
+			Code:  rep.StatusCode,
+			Reply: &Reply{},
+		}
+
+		if mediatype, _, err := mime.ParseMediaType(rep.Header.Get("Content-Type")); err == nil {
+			switch mediatype {
+			case "application/json":
+				json.NewDecoder(rep.Body).Decode(serr.Reply)
+			case "text/plain":
+				data, _ := io.ReadAll(rep.Body)
+				serr.Reply.Error = string(data)
+			}
+		}
+
+		if serr.Reply.Error == "" {
+			serr.Reply.Error = http.StatusText(rep.StatusCode)
+		}
+		return serr
+	}
+	return nil
 }

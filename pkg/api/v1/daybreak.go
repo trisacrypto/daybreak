@@ -13,7 +13,7 @@ type Modified struct {
 	Modified time.Time `json:"modified"`
 }
 
-type SyncResponse struct {
+type SyncReply struct {
 	LastModified     time.Time   `json:"last_modified"`     // The last modified time of the database
 	Companies        []*Modified `json:"companies"`         // Insert or update these companies
 	DeletedCompanies []*Modified `json:"deleted_companies"` // Delete these companies

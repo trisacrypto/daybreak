@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +13,9 @@ import (
 
 type Client interface {
 	Status(context.Context) (*StatusReply, error)
+	Sync(context.Context, time.Time) (*SyncReply, time.Time, error)
+	Download(context.Context, time.Time, io.Writer) (time.Time, error)
+	DownloadTo(context.Context, time.Time, string) error
 	ListCompanies(context.Context) ([]*Company, error)
 	CreateCompany(context.Context, *Company) (*Company, error)
 	RetrieveCompany(context.Context, uuid.UUID) (*Company, error)

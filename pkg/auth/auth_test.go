@@ -152,6 +152,16 @@ func TestAuthMiddleware(t *testing.T) {
 			requireServerAuth(t, req, rep, testLicenses[envoyID])
 		})
 
+		// A request for a zip archive is authenticated by the license like JSON is.
+		t.Run("Zip", func(t *testing.T) {
+			req := signed(t, http.MethodGet, "/daybreak", envoyID)
+			req.Header.Set("Accept", MIMEZIP)
+
+			rep := do(t, req)
+			require.Equal(t, http.StatusOK, rep.StatusCode)
+			requireServerAuth(t, req, rep, testLicenses[envoyID])
+		})
+
 		// Handlers are given the permissions of the license; there is no user.
 		t.Run("Identity", func(t *testing.T) {
 			for _, clientID := range []ulid.ULID{adminID, envoyID, noPermissionsID, wildcardID} {
@@ -390,7 +400,7 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("NotAcceptable", func(t *testing.T) {
-		// Only HTML and JSON can be negotiated. The requests are otherwise valid and
+		// Only HTML, JSON, and zip can be negotiated. The requests are otherwise valid and
 		// would be authenticated by the license if they accepted JSON.
 		tests := []struct {
 			name   string

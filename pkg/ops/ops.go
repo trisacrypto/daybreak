@@ -3,6 +3,7 @@ package ops
 import (
 	"context"
 
+	"github.com/gin-gonic/gin"
 	"github.com/trisacrypto/daybreak/pkg/db"
 )
 
@@ -78,4 +79,11 @@ func Transfer(ctx context.Context, importer Importer, exporter Exporter) (err er
 	}
 
 	return nil
+}
+
+// Download the zip file of the database to the response writer.
+func Download(ctx context.Context, c *gin.Context, db *db.DB) (err error) {
+	exporter := &DatabaseExporter{db: db}
+	importer := &StreamImporter{w: c.Writer}
+	return Transfer(ctx, importer, exporter)
 }

@@ -38,6 +38,9 @@ const (
 	XResponseID         = "X-Response-ID"
 	XTimestamp          = "X-Timestamp"
 	ServerAuthorization = "Server-Authorization"
+
+	// The content type of the archive that is requested from the download endpoint.
+	MIMEZIP = "application/zip"
 )
 
 var (
@@ -60,14 +63,16 @@ var (
 )
 
 // This middleware is used to authenticate either a user or a license key and is
-// primarily used for the API endpoints that also power the HTMX partials.
+// primarily used for the API endpoints that also power the HTMX partials. Requests
+// for HTML are authenticated by the session and requests for JSON or a zip archive
+// (e.g. the download endpoint) are authenticated by a license key.
 func Authenticate(db TokenIdentifier) gin.HandlerFunc {
 	licenseRequired := LicenseRequired(db)
 	return func(c *gin.Context) {
-		switch format := c.NegotiateFormat(binding.MIMEHTML, binding.MIMEJSON); format {
+		switch format := c.NegotiateFormat(binding.MIMEHTML, binding.MIMEJSON, MIMEZIP); format {
 		case binding.MIMEHTML:
 			LoginRequired(c)
-		case binding.MIMEJSON:
+		case binding.MIMEJSON, MIMEZIP:
 			licenseRequired(c)
 		default:
 			c.AbortWithStatus(http.StatusNotAcceptable)

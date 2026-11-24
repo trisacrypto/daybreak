@@ -215,48 +215,31 @@ func (i *DatabaseImporter) PrimaryContacts(primaryContacts <-chan *db.PrimaryCon
 }
 
 //============================================================================
-// Zip Importer
+// Stream Importer
 //============================================================================
 
-type ZipImporter struct {
+type StreamImporter struct {
 	BaseImporter
-	path string
-	f    *os.File
-	zw   *zip.Writer
+	w  io.Writer
+	zw *zip.Writer
 }
 
-func (i *ZipImporter) Open(ctx context.Context, errc <-chan error) (err error) {
-	if i.f, err = os.Create(i.path); err != nil {
-		return err
-	}
-
-	i.zw = zip.NewWriter(i.f)
+func (i *StreamImporter) Open(ctx context.Context, errc <-chan error) (err error) {
+	i.zw = zip.NewWriter(i.w)
 	i.ctx = ctx
 	i.errc = errc
 	return nil
 }
 
-func (i *ZipImporter) Close() (err error) {
-	if i.zw != nil {
-		err = errors.Join(err, i.zw.Close())
-		i.zw = nil
-	}
-
-	if i.f != nil {
-		err = errors.Join(err, i.f.Close())
-		i.f = nil
-	}
-
-	return err
+func (i *StreamImporter) Close() (err error) {
+	return i.zw.Close()
 }
 
-func (i *ZipImporter) Cancel() (err error) {
-	err = i.Close()
-	os.Remove(i.path)
-	return err
+func (i *StreamImporter) Cancel() (err error) {
+	return i.Close()
 }
 
-func (i *ZipImporter) Companies(companies <-chan *db.Company) (err error) {
+func (i *StreamImporter) Companies(companies <-chan *db.Company) (err error) {
 	var f io.Writer
 	if f, err = i.zw.Create(companiesFile); err != nil {
 		return err
@@ -271,7 +254,7 @@ func (i *ZipImporter) Companies(companies <-chan *db.Company) (err error) {
 	return i.Check()
 }
 
-func (i *ZipImporter) Contacts(contacts <-chan *db.Contact) (err error) {
+func (i *StreamImporter) Contacts(contacts <-chan *db.Contact) (err error) {
 	var f io.Writer
 	if f, err = i.zw.Create(contactsFile); err != nil {
 		return err
@@ -286,7 +269,7 @@ func (i *ZipImporter) Contacts(contacts <-chan *db.Contact) (err error) {
 	return i.Check()
 }
 
-func (i *ZipImporter) PrimaryContacts(primaryContacts <-chan *db.PrimaryContact) (err error) {
+func (i *StreamImporter) PrimaryContacts(primaryContacts <-chan *db.PrimaryContact) (err error) {
 	var f io.Writer
 	if f, err = i.zw.Create(primaryContactsFile); err != nil {
 		return err
@@ -299,4 +282,54 @@ func (i *ZipImporter) PrimaryContacts(primaryContacts <-chan *db.PrimaryContact)
 		}
 	}
 	return i.Check()
+}
+
+//============================================================================
+// Zip Importer
+//============================================================================
+
+type ZipImporter struct {
+	StreamImporter
+	path string
+	f    *os.File
+}
+
+func (i *ZipImporter) Open(ctx context.Context, errc <-chan error) (err error) {
+	if i.f, err = os.CreateTemp(os.TempDir(), "daybreak-import-*.zip"); err != nil {
+		return err
+	}
+
+	// Set the writer to the temporary file.
+	i.w = i.f
+	return i.StreamImporter.Open(ctx, errc)
+}
+
+func (i *ZipImporter) Close() (err error) {
+	if i.zw != nil {
+		err = errors.Join(err, i.zw.Close())
+		i.zw = nil
+	}
+
+	if i.f != nil {
+		err = errors.Join(err, i.f.Close())
+	}
+
+	os.Rename(i.f.Name(), i.path)
+	i.f = nil
+	return err
+}
+
+func (i *ZipImporter) Cancel() (err error) {
+	if i.zw != nil {
+		err = errors.Join(err, i.zw.Close())
+		i.zw = nil
+	}
+
+	if i.f != nil {
+		err = errors.Join(err, i.f.Close())
+		i.f = nil
+	}
+
+	os.Remove(i.f.Name())
+	return err
 }
