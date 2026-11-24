@@ -14,6 +14,13 @@ CREATE TABLE IF NOT EXISTS deleted_companies (
     modified    DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
+-- Deleted contacts are tracked here to allow syncs to identify records for removal.
+CREATE TABLE IF NOT EXISTS deleted_contacts (
+    id          TEXT PRIMARY KEY,
+    company_id  TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    modified    DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
 -- Creates licenses for users to access the daybreak dataset.
 CREATE TABLE IF NOT EXISTS licenses (
     id          TEXT PRIMARY KEY,

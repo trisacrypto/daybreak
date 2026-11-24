@@ -1,10 +1,14 @@
 package api_test
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
@@ -69,6 +73,320 @@ func TestClient_Status(t *testing.T) {
 		require.Error(t, err)
 		require.True(t, errors.Is(err, syscall.ECONNREFUSED))
 	})
+}
+
+func syncFixture() *api.SyncReply {
+	return &api.SyncReply{
+		LastModified: time.Date(2026, 11, 24, 12, 43, 10, 0, time.UTC),
+		Companies: []*api.Modified{
+			{
+				ID:       uuid.MustParse("efdc8488-5ecf-4a9a-8c4a-303f27985393"),
+				Modified: time.Date(2026, 11, 24, 12, 43, 10, 0, time.UTC),
+			},
+			{
+				ID:       uuid.MustParse("137cd40a-e815-48b0-99a9-98281cc2188b"),
+				Modified: time.Date(2026, 11, 24, 12, 15, 9, 0, time.UTC),
+			},
+		},
+		DeletedCompanies: []*api.Modified{
+			{
+				ID:       uuid.MustParse("fc4d6f40-ef9d-48ba-b3b4-1a9e94b47578"),
+				Modified: time.Date(2026, 11, 24, 7, 27, 51, 0, time.UTC),
+			},
+		},
+		Contacts: []*api.Modified{
+			{
+				ID:       uuid.MustParse("c49fa0c6-a10b-45a7-9370-c63b36235f0d"),
+				Modified: time.Date(2026, 11, 24, 12, 15, 9, 0, time.UTC),
+			},
+		},
+		DeletedContacts: []*api.Modified{
+			{
+				ID:       uuid.MustParse("6da2978d-993b-4b26-82f8-ac63f54d80ef"),
+				Modified: time.Date(2026, 11, 24, 12, 14, 52, 0, time.UTC),
+			},
+		},
+	}
+}
+
+func TestClient_Sync(t *testing.T) {
+	client := Serve(t, http.MethodGet, "/v1/sync", func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+		var (
+			ifModifiedSince    time.Time
+			hasIfModifiedSince bool
+		)
+
+		reply := syncFixture()
+
+		// cSpell:ignore hval
+		if hval := r.Header.Get("If-Modified-Since"); hval != "" {
+			if ts, err := http.ParseTime(hval); err == nil {
+				ifModifiedSince = ts
+				hasIfModifiedSince = true
+			} else {
+				return api.Error(http.StatusBadRequest, err, "invalid if-modified-since header")
+			}
+		}
+
+		if hasIfModifiedSince {
+			if !reply.LastModified.After(ifModifiedSince) {
+				w.Header().Set("Last-Modified", reply.LastModified.Format(http.TimeFormat))
+				w.Header().Set("Cache-Control", "private, no-store")
+				w.WriteHeader(http.StatusNotModified)
+				return nil
+			}
+		}
+
+		w.Header().Set("Last-Modified", reply.LastModified.Format(http.TimeFormat))
+		w.Header().Set("Cache-Control", "private, no-store")
+		WriteJSON(w, http.StatusOK, reply)
+		return nil
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	t.Run("NoLastModified", func(t *testing.T) {
+		reply, lastModified, err := client.Sync(ctx, time.Time{})
+		require.NoError(t, err)
+		require.Equal(t, syncFixture(), reply)
+		require.NotZero(t, lastModified)
+		require.Equal(t, reply.LastModified, lastModified)
+	})
+
+	t.Run("LastModified", func(t *testing.T) {
+		reply, lastModified, err := client.Sync(ctx, time.Date(2026, 11, 23, 21, 8, 5, 0, time.UTC))
+		require.NoError(t, err)
+		require.Equal(t, syncFixture(), reply)
+		require.NotZero(t, lastModified)
+		require.Equal(t, reply.LastModified, lastModified)
+	})
+
+	t.Run("NotModifiedSince", func(t *testing.T) {
+		reply, lastModified, err := client.Sync(ctx, time.Date(2026, 11, 25, 17, 34, 11, 0, time.UTC))
+		require.ErrorIs(t, err, errors.ErrNotModified)
+		require.Nil(t, reply)
+		require.NotZero(t, lastModified)
+		require.Equal(t, syncFixture().LastModified, lastModified)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		client := Serve(t, http.MethodGet, "/v1/sync", func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusInternalServerError, &api.Reply{Error: "Internal Server Error"})
+			return nil
+		})
+
+		reply, lastModified, err := client.Sync(ctx, time.Time{})
+		require.Nil(t, reply)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusInternalServerError, err.(*api.StatusError).Code)
+		require.Equal(t, "Internal Server Error", err.(*api.StatusError).Reply.Error)
+		require.Zero(t, lastModified)
+	})
+}
+
+// downloadFixture returns the bytes of a zip archive that has the same layout as the
+// archive streamed by the download endpoint.
+func downloadFixture(t *testing.T) []byte {
+	buf := &bytes.Buffer{}
+	zw := zip.NewWriter(buf)
+
+	files := []struct{ name, data string }{
+		{"companies.json", `{"id":"efdc8488-5ecf-4a9a-8c4a-303f27985393","domain":"acme.com"}` + "\n"},
+		{"contacts.json", `{"id":"c49fa0c6-a10b-45a7-9370-c63b36235f0d","email":"compliance@acme.com"}` + "\n"},
+		{"primaries.json", `{"company_id":"efdc8488-5ecf-4a9a-8c4a-303f27985393","contact_id":"c49fa0c6-a10b-45a7-9370-c63b36235f0d"}` + "\n"},
+	}
+
+	for _, file := range files {
+		f, err := zw.Create(file.name)
+		require.NoError(t, err)
+		_, err = f.Write([]byte(file.data))
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, zw.Close())
+	return buf.Bytes()
+}
+
+func TestClient_Download(t *testing.T) {
+	var (
+		fixture      = downloadFixture(t)
+		modified     = time.Date(2026, 11, 24, 12, 43, 10, 0, time.UTC)
+		filename     = "daybreak-20261124124310.zip"
+		notAccepted  = "application/zip is the only content type served at this endpoint"
+		serverFailed = "Internal Server Error"
+	)
+
+	// Returns a handler that serves the fixture with the specified content disposition.
+	download := func(contentDisposition string) Handler {
+		return func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			if r.Header.Get("Accept") != "application/zip" {
+				return api.Error(http.StatusNotAcceptable, errors.ErrNotAccepted, notAccepted)
+			}
+
+			// cSpell:ignore hval
+			if hval := r.Header.Get("If-Modified-Since"); hval != "" {
+				ts, err := http.ParseTime(hval)
+				if err != nil {
+					return api.Error(http.StatusBadRequest, err, "invalid if-modified-since header")
+				}
+
+				if !modified.After(ts) {
+					w.Header().Set("Last-Modified", modified.Format(http.TimeFormat))
+					w.Header().Set("Cache-Control", "private, no-store")
+					w.WriteHeader(http.StatusNotModified)
+					return nil
+				}
+			}
+
+			w.Header().Set("Last-Modified", modified.Format(http.TimeFormat))
+			w.Header().Set("Cache-Control", "private, no-store")
+			w.Header().Set("Content-Type", "application/zip")
+			if contentDisposition != "" {
+				w.Header().Set("Content-Disposition", contentDisposition)
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(fixture)
+			return nil
+		}
+	}
+
+	client := Serve(t, http.MethodGet, "/v1/download", download(`attachment; filename="`+filename+`"`))
+
+	t.Run("NoLastModified", func(t *testing.T) {
+		buf := &bytes.Buffer{}
+		lastModified, err := client.Download(ctx(t), time.Time{}, buf)
+		require.NoError(t, err)
+		require.Equal(t, modified, lastModified)
+		require.Equal(t, fixture, buf.Bytes())
+	})
+
+	t.Run("LastModified", func(t *testing.T) {
+		buf := &bytes.Buffer{}
+		lastModified, err := client.Download(ctx(t), time.Date(2026, 11, 23, 21, 8, 5, 0, time.UTC), buf)
+		require.NoError(t, err)
+		require.Equal(t, modified, lastModified)
+		require.Equal(t, fixture, buf.Bytes())
+	})
+
+	t.Run("NotModifiedSince", func(t *testing.T) {
+		buf := &bytes.Buffer{}
+		lastModified, err := client.Download(ctx(t), time.Date(2026, 11, 25, 17, 34, 11, 0, time.UTC), buf)
+		require.ErrorIs(t, err, errors.ErrNotModified)
+		require.Equal(t, modified, lastModified)
+		require.Zero(t, buf.Len(), "nothing should be written when not modified")
+	})
+
+	t.Run("DownloadTo", func(t *testing.T) {
+		t.Run("NoLastModified", func(t *testing.T) {
+			dir := t.TempDir()
+			require.NoError(t, client.DownloadTo(ctx(t), time.Time{}, dir))
+
+			data, err := os.ReadFile(filepath.Join(dir, filename))
+			require.NoError(t, err)
+			require.Equal(t, fixture, data)
+		})
+
+		t.Run("LastModified", func(t *testing.T) {
+			dir := t.TempDir()
+			require.NoError(t, client.DownloadTo(ctx(t), time.Date(2026, 11, 23, 21, 8, 5, 0, time.UTC), dir))
+
+			data, err := os.ReadFile(filepath.Join(dir, filename))
+			require.NoError(t, err)
+			require.Equal(t, fixture, data)
+		})
+
+		t.Run("NotModifiedSince", func(t *testing.T) {
+			dir := t.TempDir()
+			err := client.DownloadTo(ctx(t), time.Date(2026, 11, 25, 17, 34, 11, 0, time.UTC), dir)
+			require.ErrorIs(t, err, errors.ErrNotModified)
+			requireEmptyDir(t, dir)
+		})
+
+		t.Run("UnsafeFilename", func(t *testing.T) {
+			client := Serve(t, http.MethodGet, "/v1/download", download(`attachment; filename="../../`+filename+`"`))
+
+			root := t.TempDir()
+			dir := filepath.Join(root, "a", "b")
+			require.NoError(t, os.MkdirAll(dir, 0755))
+			require.NoError(t, client.DownloadTo(ctx(t), time.Time{}, dir))
+
+			data, err := os.ReadFile(filepath.Join(dir, filename))
+			require.NoError(t, err, "file should be written to the specified directory")
+			require.Equal(t, fixture, data)
+			require.NoFileExists(t, filepath.Join(root, filename), "file should not escape the specified directory")
+		})
+
+		t.Run("NoContentDisposition", func(t *testing.T) {
+			client := Serve(t, http.MethodGet, "/v1/download", download(""))
+
+			dir := t.TempDir()
+			err := client.DownloadTo(ctx(t), time.Time{}, dir)
+			require.ErrorContains(t, err, "could not parse content-disposition header")
+			requireEmptyDir(t, dir)
+		})
+
+		t.Run("NoFilename", func(t *testing.T) {
+			client := Serve(t, http.MethodGet, "/v1/download", download("attachment"))
+
+			dir := t.TempDir()
+			err := client.DownloadTo(ctx(t), time.Time{}, dir)
+			require.EqualError(t, err, "no filename in content-disposition header")
+			requireEmptyDir(t, dir)
+		})
+
+		t.Run("NoDirectory", func(t *testing.T) {
+			dir := filepath.Join(t.TempDir(), "missing")
+			err := client.DownloadTo(ctx(t), time.Time{}, dir)
+			require.ErrorIs(t, err, os.ErrNotExist)
+			require.ErrorContains(t, err, "could not create file")
+		})
+
+		t.Run("Error", func(t *testing.T) {
+			client := Serve(t, http.MethodGet, "/v1/download", func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+				WriteJSON(w, http.StatusInternalServerError, &api.Reply{Error: serverFailed})
+				return nil
+			})
+
+			dir := t.TempDir()
+			err := client.DownloadTo(ctx(t), time.Time{}, dir)
+			require.Error(t, err)
+			require.IsType(t, &api.StatusError{}, err)
+			require.Equal(t, http.StatusInternalServerError, err.(*api.StatusError).Code)
+			require.Equal(t, serverFailed, err.(*api.StatusError).Reply.Error)
+			requireEmptyDir(t, dir)
+		})
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		client := Serve(t, http.MethodGet, "/v1/download", func(w http.ResponseWriter, r *http.Request) *errors.HTTP {
+			WriteJSON(w, http.StatusInternalServerError, &api.Reply{Error: serverFailed})
+			return nil
+		})
+
+		buf := &bytes.Buffer{}
+		lastModified, err := client.Download(ctx(t), time.Time{}, buf)
+		require.Error(t, err)
+		require.IsType(t, &api.StatusError{}, err)
+		require.Equal(t, http.StatusInternalServerError, err.(*api.StatusError).Code)
+		require.Equal(t, serverFailed, err.(*api.StatusError).Reply.Error)
+		require.Zero(t, lastModified)
+		require.Zero(t, buf.Len(), "nothing should be written on error")
+	})
+}
+
+func ctx(t *testing.T) context.Context {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	t.Cleanup(cancel)
+	return ctx
+}
+
+func requireEmptyDir(t *testing.T, dir string) {
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	require.Empty(t, entries, "no files should be written to the directory")
 }
 
 //============================================================================

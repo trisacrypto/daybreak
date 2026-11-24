@@ -21,19 +21,19 @@ func init() {
 }
 
 type Company struct {
-	ID               uuid.UUID       `json:"id"`
-	LEI              string          `json:"lei"`
-	Domain           string          `json:"domain"`
-	Name             string          `json:"name"`
-	Website          string          `json:"website"`
-	Country          string          `json:"country"`
-	BusinessCategory string          `json:"business_category"`
-	VASPCategories   []string        `json:"vasp_categories"`
+	ID               uuid.UUID       `json:"id,omitzero"`
+	LEI              string          `json:"lei,omitempty"`
+	Domain           string          `json:"domain,omitempty"`
+	Name             string          `json:"name,omitempty"`
+	Website          string          `json:"website,omitempty"`
+	Country          string          `json:"country,omitempty"`
+	BusinessCategory string          `json:"business_category,omitempty"`
+	VASPCategories   []string        `json:"vasp_categories,omitempty"`
 	NumContacts      int             `json:"num_contacts"`
-	IVMS101          json.RawMessage `json:"ivms101"`
-	VerifiedOn       time.Time       `json:"verified_on"`
-	Created          time.Time       `json:"created"`
-	Modified         time.Time       `json:"modified"`
+	IVMS101          json.RawMessage `json:"ivms101,omitempty"`
+	VerifiedOn       time.Time       `json:"verified_on,omitzero"`
+	Created          time.Time       `json:"created,omitzero"`
+	Modified         time.Time       `json:"modified,omitzero"`
 
 	// Contacts may be supplied on create to atomically create the company and its
 	// initial contacts; the first contact becomes the company's primary contact.

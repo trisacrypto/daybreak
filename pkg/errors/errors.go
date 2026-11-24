@@ -10,12 +10,11 @@ var (
 	ErrMethodNotFound   = errors.New("resource not found")
 	ErrMethodNotAllowed = errors.New("method not allowed")
 	ErrNotAccepted      = errors.New("this content type is not accepted at this endpoint")
+	ErrNotModified      = errors.New("content has not been modified since the last request")
 
 	// Store/Database Errors
 	ErrInvalidDSN           = errors.New("invalid database DSN")
 	ErrDatabase             = errors.New("database error")
-	ErrSQLiteForeignKeys    = errors.New("could not enable sqlite foreign keys")
-	ErrSQLiteQueryOnly      = errors.New("could not set sqlite to query_only mode")
 	ErrReadOnly             = errors.New("cannot perform operation in read-only mode")
 	ErrMissingAssociation   = errors.New("associated record(s) not cached on model")
 	ErrMissingReference     = errors.New("missing id of foreign key reference")

@@ -159,5 +159,24 @@ func (s *Suite) TestContacts() {
 		company, modified := timestamps()
 		require.True(company.After(companyModified), "expected delete to change company modified")
 		require.True(modified.After(lastModified), "expected delete to change last modified")
+
+		// The contact should be the only record in the deleted contacts table.
+		tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+		require.NoError(err)
+		defer tx.Rollback()
+
+		count, err := s.Count(tx.Tx, "deleted_contacts")
+		require.NoError(err)
+		require.Equal(1, count)
+
+		var (
+			deletedCompanyID uuid.UUID
+			deleted          fields.Timestamp
+		)
+
+		err = tx.QueryRow("SELECT company_id, modified FROM deleted_contacts WHERE id=:id", sql.Named("id", contact.ID)).Scan(&deletedCompanyID, &deleted)
+		require.NoError(err, "expected contact to be in the deleted contacts table")
+		require.Equal(companyID, deletedCompanyID)
+		require.False(deleted.IsZero())
 	})
 }

@@ -17,6 +17,17 @@ import (
 
 const (
 	defaultDBTimeout = 600 * time.Second
+	strictPragmas    = true
+)
+
+var (
+	defaultOptions = map[string]string{
+		"_timezone":     "UTC",
+		"_journal_mode": "WAL",
+		"_busy_timeout": "4096",
+		"_foreign_keys": "on",
+		"_txlock":       "immediate",
+	}
 )
 
 // Opens a new database connection using the provided DSN.
@@ -44,13 +55,17 @@ func Open(uri *dsn.DSN) (_ *DB, err error) {
 		empty = true
 	}
 
-	// Ensure the timezone is set to UTC.
-	if _, ok := uri.Get("_timezone"); !ok {
-		uri.Set("_timezone", "UTC")
+	// Ensure the default options are set if they are not on the DSN
+	for key, val := range defaultOptions {
+		if _, ok := uri.Get(key); !ok {
+			uri.Set(key, val)
+		}
 	}
 
+	// Ensure strict pragmas are enabled.
+	modernc.StrictPragmas(strictPragmas)
+
 	// Open the database connection.
-	// TODO: fix in go.rtnl.ai/x/dsn
 	db := &DB{uri: uri, readonly: uri.ReadOnly()}
 	if db.DB, err = sql.Open(dsn.SQLite, fileURI(uri)); err != nil {
 		return nil, err
@@ -61,21 +76,9 @@ func Open(uri *dsn.DSN) (_ *DB, err error) {
 		return nil, err
 	}
 
-	// Ensure that foreign key support is turned on by executing PRAGMA query.
-	if _, err = db.DB.Exec("PRAGMA foreign_keys = on;"); err != nil {
-		return nil, errors.Join(errors.ErrSQLiteForeignKeys, err)
-	}
-
 	// Ensure the schema is initialized.
 	if err = db.InitializeSchema(empty); err != nil {
 		return nil, err
-	}
-
-	// Set the database to readonly mode after initializing the schema.
-	if uri.ReadOnly() {
-		if _, err = db.DB.Exec("PRAGMA query_only = on;"); err != nil {
-			return nil, errors.Join(errors.ErrSQLiteQueryOnly, err)
-		}
 	}
 
 	// Start the janitor routine.

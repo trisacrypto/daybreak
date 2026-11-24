@@ -106,3 +106,12 @@ func (s *Server) RetrieveLicense(ctx context.Context, licenseID ulid.ULID) (*db.
 	}
 	return s.db.RetrieveLicense(ctx, licenseID)
 }
+
+func (s *Server) LicenseAccessed(ctx context.Context, licenseID ulid.ULID) error {
+	s.RLock()
+	defer s.RUnlock()
+	if s.db == nil {
+		return errors.ErrNoDatabase
+	}
+	return s.db.LicenseAccessed(ctx, licenseID)
+}

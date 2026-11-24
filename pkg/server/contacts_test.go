@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -40,7 +39,6 @@ func (s *Suite) TestContactResource() {
 				Email:     "victoria.relka@globex.de",
 				Role:      "Compliance Intern",
 				CompanyID: uuid.MustParse("9c865355-07b7-4013-b4c1-1d986def39d5"),
-				IVMS101:   json.RawMessage([]byte("null")),
 			}
 
 			created, err := s.client.CreateContact(ctx, contact)
@@ -108,10 +106,9 @@ func (s *Suite) TestContactResource() {
 		s.Run("Success", func() {
 			require := s.Require()
 			contact := &api.Contact{
-				Name:    "Victoria Relka",
-				Email:   "victoria.relka@globex.de",
-				Role:    "Compliance Intern",
-				IVMS101: json.RawMessage([]byte("null")),
+				Name:  "Victoria Relka",
+				Email: "victoria.relka@globex.de",
+				Role:  "Compliance Intern",
 			}
 
 			companyID := uuid.MustParse("9c865355-07b7-4013-b4c1-1d986def39d5")

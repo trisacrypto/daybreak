@@ -6,8 +6,11 @@
 {{- define "header-actions" }}
 {{- if not .IsViewOnly }}
 <button disabled class="btn btn-primary ms-2 lift" data-bs-toggle="modal" data-bs-target="#createEntryModal">
-  Add Daybreak Entry
+  <i class="fe fe-plus"></i> Add Entry
 </button>
+<a href="/v1/download" class="btn btn-info ms-2 lift">
+  <i class="fe fe-download-cloud"></i> Download
+</a>
 {{- end }}
 {{- end }}
 

@@ -9,7 +9,7 @@ import (
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
 )
 
-// cSpell:ignore globex AKFAMMDK GSAT numerique
+// cSpell:ignore globex AKFAMMDK GSAT numerique nordlys
 func (s *Suite) TestCompanyResource() {
 	s.T().Cleanup(s.ResetDB)
 
@@ -34,7 +34,6 @@ func (s *Suite) TestCompanyResource() {
 				Country:          "FR",
 				BusinessCategory: "PRIVATE_ORGANIZATION",
 				VASPCategories:   []string{"Custodian", "Project"},
-				IVMS101:          json.RawMessage([]byte("null")),
 			}
 
 			created, err := s.client.CreateCompany(ctx, company)

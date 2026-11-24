@@ -47,6 +47,7 @@ func Authorize(permissions ...string) gin.HandlerFunc {
 // Some predefined permissions for convenience.
 var (
 	EnvoyUser           = Authorize(DaybreakSync)
+	EnvoyDownload       = Authorize(DaybreakDownload)
 	DaybreakContributor = Authorize(CounterpartiesCreate)
 	DaybreakEditor      = Authorize(CounterpartiesAdmin)
 	DaybreakLicensor    = Authorize(LicensesAdmin)

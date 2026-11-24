@@ -3,23 +3,22 @@ package main
 import (
 	"context"
 	"crypto/rand"
-	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"os"
-	"strings"
 	"text/tabwriter"
+	"time"
 
-	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v3"
 
 	confire "go.rtnl.ai/confire/usage"
+	"go.rtnl.ai/x/dsn"
 
 	"github.com/trisacrypto/daybreak/pkg"
-	"github.com/trisacrypto/daybreak/pkg/api/v1"
 	"github.com/trisacrypto/daybreak/pkg/config"
 	"github.com/trisacrypto/daybreak/pkg/db"
+	"github.com/trisacrypto/daybreak/pkg/ops"
 	"github.com/trisacrypto/daybreak/pkg/server"
 )
 
@@ -59,17 +58,38 @@ func main() {
 				},
 			},
 			{
-				Name:      "load",
-				Usage:     "load data from a file into the database",
-				Action:    load,
-				ArgsUsage: "daybreak.json",
-				Category:  "service",
-			},
-			{
 				Name:     "session-key",
 				Usage:    "generate a new session key",
 				Action:   sessionKey,
 				Category: "service",
+			},
+			{
+				Name:      "import",
+				Usage:     "import data from a zip file into the database",
+				ArgsUsage: "daybreak.zip",
+				Action:    importDaybreak,
+				Category:  "service",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "dsn",
+						Usage:   "DSN to use for the database",
+						Sources: cli.EnvVars("DAYBREAK_DATABASE_URL"),
+					},
+				},
+			},
+			{
+				Name:      "export",
+				Usage:     "export data from the database to a zip file",
+				ArgsUsage: "daybreak.zip",
+				Action:    exportDaybreak,
+				Category:  "service",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "dsn",
+						Usage:   "DSN to use for the database",
+						Sources: cli.EnvVars("DAYBREAK_DATABASE_URL"),
+					},
+				},
 			},
 		},
 	}
@@ -115,71 +135,6 @@ func usage(ctx context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-// load loads data from a file into the database.
-func load(ctx context.Context, cmd *cli.Command) (err error) {
-	if cmd.NArg() != 1 {
-		return cli.Exit("specify only one path to a daybreak file to load", 1)
-	}
-
-	filename := cmd.Args().First()
-	if filename == "" {
-		return cli.Exit("a daybreak fixture file is required", 1)
-	}
-
-	var conf config.Config
-	if conf, err = config.Get(); err != nil {
-		return cli.Exit(err, 1)
-	}
-
-	if conf.DatabaseURL == "" {
-		return cli.Exit("a database URL is required to load data", 1)
-	}
-
-	var conn *db.DB
-	if conn, err = db.Open(conf.DatabaseDSN()); err != nil {
-		return cli.Exit(err, 1)
-	}
-	defer conn.Close()
-
-	var records []*api.GDSRecord
-	if records, err = api.Fixture(filename); err != nil {
-		return cli.Exit(err, 1)
-	}
-
-	var tx *db.Tx
-	if tx, err = conn.Begin(ctx, &sql.TxOptions{ReadOnly: false}); err != nil {
-		return cli.Exit(err, 1)
-	}
-	defer tx.Rollback()
-
-	for _, record := range records {
-		company := record.Model()
-		if err = tx.CreateCompany(company); err != nil {
-			return cli.Exit(err, 1)
-		}
-
-		target := strings.TrimPrefix(record.Endpoint, "mailto:")
-
-		for i, contact := range record.Contacts {
-			contact := contact.Model()
-			contact.CompanyID = company.ID
-			if err = tx.CreateContact(contact); err != nil {
-				return cli.Exit(err, 1)
-			}
-
-			if contact.Email == target || i == 0 {
-				company.PrimaryContact = uuid.NullUUID{UUID: contact.ID, Valid: true}
-			}
-		}
-
-	}
-
-	if err = tx.Commit(); err != nil {
-		return cli.Exit(err, 1)
-	}
-	return nil
-}
-
 // sessionKey generates a new session key.
 func sessionKey(ctx context.Context, cmd *cli.Command) (err error) {
 	out := make([]byte, 32)
@@ -188,4 +143,73 @@ func sessionKey(ctx context.Context, cmd *cli.Command) (err error) {
 	}
 	fmt.Println(base64.StdEncoding.EncodeToString(out))
 	return nil
+}
+
+func importDaybreak(ctx context.Context, cmd *cli.Command) (err error) {
+	if cmd.NArg() != 1 {
+		return cli.Exit("specify a single path to the zip file to import", 1)
+	}
+
+	var path string
+	if path = cmd.Args().First(); path == "" {
+		return cli.Exit("specify a path to the zip file to import", 1)
+	}
+
+	var db *db.DB
+	if db, err = openDB(cmd); err != nil {
+		return cli.Exit(err, 1)
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, 4*time.Minute)
+	defer cancel()
+
+	if err = ops.Import(ctx, db, path); err != nil {
+		return cli.Exit(err, 1)
+	}
+
+	return nil
+}
+
+func exportDaybreak(ctx context.Context, cmd *cli.Command) (err error) {
+	if cmd.NArg() != 1 {
+		return cli.Exit("specify a single path to the zip file to import", 1)
+	}
+
+	var path string
+	if path = cmd.Args().First(); path == "" {
+		return cli.Exit("specify a path to the zip file to import", 1)
+	}
+
+	var db *db.DB
+	if db, err = openDB(cmd); err != nil {
+		return cli.Exit(err, 1)
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, 4*time.Minute)
+	defer cancel()
+
+	if err = ops.Export(ctx, db, path); err != nil {
+		return cli.Exit(err, 1)
+	}
+
+	return nil
+}
+
+func openDB(cmd *cli.Command) (conn *db.DB, err error) {
+	var uri string
+	if uri = cmd.String("dsn"); uri == "" {
+		return nil, cli.Exit("specify a DSN to use for the database", 1)
+	}
+
+	var dsi *dsn.DSN
+	if dsi, err = dsn.Parse(uri); err != nil {
+		return nil, err
+	}
+
+	if conn, err = db.Open(dsi); err != nil {
+		return nil, err
+	}
+	return conn, nil
 }

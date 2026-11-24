@@ -2,15 +2,20 @@ package api
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/trisacrypto/daybreak/pkg/db"
 	"go.rtnl.ai/ulid"
 	"go.rtnl.ai/x/validation"
 )
 
 type Client interface {
 	Status(context.Context) (*StatusReply, error)
+	Sync(context.Context, time.Time) (*SyncReply, time.Time, error)
+	Download(context.Context, time.Time, io.Writer) (time.Time, error)
+	DownloadTo(context.Context, time.Time, string) error
 	ListCompanies(context.Context) ([]*Company, error)
 	CreateCompany(context.Context, *Company) (*Company, error)
 	RetrieveCompany(context.Context, uuid.UUID) (*Company, error)
@@ -43,6 +48,11 @@ type StatusReply struct {
 	Status  string `json:"status"`
 	Uptime  string `json:"uptime,omitempty"`
 	Version string `json:"version,omitempty"`
+}
+
+type Models[D any, T any, M db.Model[T]] interface {
+	*D
+	Model() M
 }
 
 type DTO struct {

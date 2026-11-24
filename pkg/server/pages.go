@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/trisacrypto/daybreak/pkg"
 	"github.com/trisacrypto/daybreak/pkg/api/v1"
 	"github.com/trisacrypto/daybreak/pkg/db"
 	"github.com/trisacrypto/daybreak/pkg/errors"
@@ -29,7 +30,12 @@ func (s *Server) DashboardPage(ctx context.Context, c *gin.Context) *errors.HTTP
 
 func (s *Server) AboutPage(ctx context.Context, c *gin.Context) *errors.HTTP {
 	data := scene.New(c).ForPage("about")
+	data["Revision"] = pkg.GitVersion
+	data["BuildDate"] = pkg.BuildDate
 	data["Uptime"] = time.Since(s.started).String()
+
+	lastModified, _ := s.db.LastModified(ctx)
+	data["LastModified"] = lastModified.Time()
 
 	healthy := s.IsHealthy()
 	ready := s.IsReady()
