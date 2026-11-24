@@ -35,11 +35,9 @@ func (tx *Tx) DashboardInfo() (info *DashboardInfo, err error) {
 	if err = tx.QueryRow(countryCountSQL).Scan(&info.Countries); err != nil {
 		return nil, err
 	}
-
-	// TODO: add license count when we have a licenses table
-	// if err = tx.QueryRow(licenseCountSQL).Scan(&info.Licenses); err != nil {
-	// 	return nil, err
-	// }
+	if err = tx.QueryRow(licenseCountSQL).Scan(&info.Licenses); err != nil {
+		return nil, err
+	}
 
 	return info, nil
 }
